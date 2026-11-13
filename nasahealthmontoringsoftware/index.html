@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Astronaut Self-Assessment Panel — NASA Space Apps 2026 prototype</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6aa8ff"/><stop offset="1" stop-color="#3ecf8e"/></linearGradient></defs>
+        <circle cx="24" cy="24" r="21" fill="none" stroke="url(#lg)" stroke-width="3"/>
+        <ellipse cx="24" cy="24" rx="21" ry="8" fill="none" stroke="#9aa6c2" stroke-width="1.5" transform="rotate(-25 24 24)"/>
+        <circle cx="24" cy="24" r="5" fill="url(#lg)"/>
+        <circle cx="41" cy="15" r="2.6" fill="#e8edf7"/>
+      </svg>
+      <div>
+        <h1 data-i18n="appTitle">Astronaut Self-Assessment Panel</h1>
+        <p class="sub" data-i18n="appSub">NASA Space Apps Challenge 2026 · prototype</p>
+      </div>
+    </div>
+    <div class="top-right">
+      <label class="lang"><span class="sr-only" data-i18n="langLabel">Language</span><select id="lang"></select></label>
+    </div>
+  </header>
+
+  <p class="tagline" data-i18n="hero">Self-monitoring prototype for crews on long missions: each person is compared with their own baseline, never diagnosed.</p>
+
+  <div class="banner" role="note">
+    <strong data-i18n="bannerStrong">Prototype — not a medical device.</strong>
+    <span data-i18n="bannerText">Nothing here is a diagnosis or treatment advice. Statuses are statistical comparisons with your own baseline.</span>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true" data-tab="dash" data-i18n="tabDash">Dashboard</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="compare" data-i18n="tabCompare">Compare users</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="osdr" data-i18n="tabOsdr">Real data (NASA OSDR)</button>
+  </nav>
+
+  <div id="view-dash">
+  <main class="console">
+    <aside class="rail rail-left" aria-label="Users and data entry">
+      <div class="toolbar">
+        <div class="source-toggle" role="group" aria-label="Data source" data-i18n-aria="srcLabel">
+          <button id="btn-demo" class="seg active" aria-pressed="true" data-i18n="btnDemo">Simulated demo</button>
+          <button id="btn-manual" class="seg" aria-pressed="false" data-i18n="btnManual">My users</button>
+        </div>
+        <span id="source-badge" class="badge sim">DATA: SIMULATED (fictional)</span>
+      </div>
+
+      <section class="card" aria-labelledby="h-users">
+        <h2 id="h-users" data-i18n="users.title">Users</h2>
+        <p class="hint" data-i18n="users.hint">Add each person (for example each team member), select them, then enter their values. Data stays in this browser.</p>
+        <p id="user-none" class="empty" data-i18n="users.none">No user yet. Add a user to start entering values.</p>
+        <div class="userbar">
+          <label class="grow"><span data-i18n="users.select">Selected user</span><select id="user-select"></select></label>
+          <button id="user-remove" class="ghost" type="button" data-i18n="users.remove">Remove user</button>
+        </div>
+        <form id="user-add" class="userbar" novalidate>
+          <label class="grow"><span data-i18n="users.new">New user name</span><input id="user-name" type="text" maxlength="30" autocomplete="off" data-i18n-ph="users.placeholder" placeholder="e.g. Student 1"></label>
+          <button class="primary" type="submit" data-i18n="users.add">Add user</button>
+        </form>
+        <div id="user-msg" role="status" class="form-msg"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-checkin">
+        <h2 id="h-checkin" data-i18n="checkin">Daily check-in</h2>
+        <p class="hint" data-i18n="checkinHint">Leave a field empty if you did not measure it. Entries are stored only in this browser.</p>
+        <form id="checkin" novalidate></form>
+        <div id="form-msg" role="alert" class="form-msg"></div>
+        <button id="clear-manual" class="link" type="button" data-i18n="clear">Delete my entries</button>
+      </section>
+    </aside>
+
+    <section class="stage" aria-labelledby="h-body">
+      <h2 id="h-body" data-i18n="bodyMap">Body map</h2>
+      <p class="hint" data-i18n="bodyHint">Select a region. Grey = not enough data or no indicator yet.</p>
+      <div class="bodywrap">
+        <svg id="body" viewBox="0 0 440 452" role="group" aria-label="Clickable body map" data-i18n-aria="bodyAria">
+          <defs>
+            <radialGradient id="halo" cx="0.5" cy="0.45" r="0.55"><stop offset="0" stop-color="#7cc4ff" stop-opacity="0.16"/><stop offset="1" stop-color="#7cc4ff" stop-opacity="0"/></radialGradient>
+            <linearGradient id="scanfade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7cc4ff" stop-opacity="0"/><stop offset="0.5" stop-color="#7cc4ff" stop-opacity="0.9"/><stop offset="1" stop-color="#7cc4ff" stop-opacity="0"/></linearGradient>
+            <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a2639"/><stop offset="1" stop-color="#0d1420"/></linearGradient>
+          </defs>
+          <ellipse class="deco" cx="220" cy="210" rx="210" ry="215" fill="url(#halo)"/>
+          <ellipse class="plinth deco" cx="220" cy="438" rx="78" ry="9"/>
+          <g class="figure deco" transform="translate(110 0)" aria-hidden="true">
+            <path class="skin" d="M119.0 70.0 C119.0 73.0 115.5 83.7 119.0 88.0 C122.5 92.3 132.8 93.5 140.0 96.0 C147.2 98.5 156.5 99.7 162.0 103.0 C167.5 106.3 170.2 108.2 173.0 116.0 C175.8 123.8 177.0 137.7 179.0 150.0 C181.0 162.3 183.0 179.3 185.0 190.0 C187.0 200.7 189.3 207.0 191.0 214.0 C192.7 221.0 194.2 226.7 195.0 232.0 C195.8 237.3 197.0 242.8 196.0 246.0 C195.0 249.2 191.2 251.0 189.0 251.0 C186.8 251.0 184.5 249.2 183.0 246.0 C181.5 242.8 181.2 237.3 180.0 232.0 C178.8 226.7 178.0 222.0 176.0 214.0 C174.0 206.0 170.7 194.7 168.0 184.0 C165.3 173.3 162.2 159.0 160.0 150.0 C157.8 141.0 155.8 133.3 155.0 130.0  C154.7 133.3 154.3 140.7 153.0 150.0 C151.7 159.3 148.3 175.3 147.0 186.0 C145.7 196.7 144.8 205.7 145.0 214.0 C145.2 222.3 147.3 228.0 148.0 236.0 C148.7 244.0 149.3 251.3 149.0 262.0 C148.7 272.7 147.0 287.8 146.0 300.0 C145.0 312.2 143.8 326.3 143.0 335.0 C142.2 343.7 141.3 343.7 141.0 352.0 C140.7 360.3 141.7 374.5 141.0 385.0 C140.3 395.5 137.5 407.5 137.0 415.0 C136.5 422.5 136.8 426.3 138.0 430.0 C139.2 433.7 146.3 435.8 144.0 437.0 C141.7 438.2 127.5 438.5 124.0 437.0 C120.5 435.5 123.0 436.7 123.0 428.0 C123.0 419.3 124.2 397.7 124.0 385.0 C123.8 372.3 122.7 360.3 122.0 352.0 C121.3 343.7 120.7 343.7 120.0 335.0 C119.3 326.3 119.0 311.5 118.0 300.0 C117.0 288.5 115.0 272.3 114.0 266.0 C113.0 259.7 112.3 262.7 112.0 262.0 L108 262  C107.7 262.7 107.0 259.7 106.0 266.0 C105.0 272.3 103.0 288.5 102.0 300.0 C101.0 311.5 100.7 326.3 100.0 335.0 C99.3 343.7 98.7 343.7 98.0 352.0 C97.3 360.3 96.2 372.3 96.0 385.0 C95.8 397.7 97.0 419.3 97.0 428.0 C97.0 436.7 99.5 435.5 96.0 437.0 C92.5 438.5 78.3 438.2 76.0 437.0 C73.7 435.8 80.8 433.7 82.0 430.0 C83.2 426.3 83.5 422.5 83.0 415.0 C82.5 407.5 79.7 395.5 79.0 385.0 C78.3 374.5 79.3 360.3 79.0 352.0 C78.7 343.7 77.8 343.7 77.0 335.0 C76.2 326.3 75.0 312.2 74.0 300.0 C73.0 287.8 71.3 272.7 71.0 262.0 C70.7 251.3 71.3 244.0 72.0 236.0 C72.7 228.0 74.8 222.3 75.0 214.0 C75.2 205.7 74.3 196.7 73.0 186.0 C71.7 175.3 68.3 159.3 67.0 150.0 C65.7 140.7 65.3 133.3 65.0 130.0  C64.2 133.3 62.2 141.0 60.0 150.0 C57.8 159.0 54.7 173.3 52.0 184.0 C49.3 194.7 46.0 206.0 44.0 214.0 C42.0 222.0 41.2 226.7 40.0 232.0 C38.8 237.3 38.5 242.8 37.0 246.0 C35.5 249.2 33.2 251.0 31.0 251.0 C28.8 251.0 25.0 249.2 24.0 246.0 C23.0 242.8 24.2 237.3 25.0 232.0 C25.8 226.7 27.3 221.0 29.0 214.0 C30.7 207.0 33.0 200.7 35.0 190.0 C37.0 179.3 39.0 162.3 41.0 150.0 C43.0 137.7 44.2 123.8 47.0 116.0 C49.8 108.2 52.5 106.3 58.0 103.0 C63.5 99.7 72.8 98.5 80.0 96.0 C87.2 93.5 97.5 92.3 101.0 88.0 C104.5 83.7 101.0 73.0 101.0 70.0 Z"/>
+            <ellipse class="skin" cx="110" cy="44" rx="22" ry="28"/>
+          </g>
+          <g class="deco" transform="translate(110 0)" aria-hidden="true">
+            <g class="anat"><path d="M120 104 C140 102 150 118 148 142 C146 158 132 162 122 156 C118 140 118 120 120 104 Z"/><path d="M100 104 C80 102 70 118 72 142 C74 158 88 162 98 156 C102 140 102 120 100 104 Z"/><path d="M114 112 C134.0 110 150 116 152 128"/><path d="M106 112 C86.0 110 70 116 68 128"/><path d="M114 122 C135.2 120 152 126 154 138"/><path d="M106 122 C84.8 120 68 126 66 138"/><path d="M114 132 C134.6 130 151 136 153 148"/><path d="M106 132 C85.4 130 69 136 67 148"/><path d="M114 142 C132.8 140 148 146 150 158"/><path d="M106 142 C87.2 140 72 146 70 158"/><path class="spine" d="M110 90 L110 250"/><path d="M80 100 C92 98 102 100 106 104"/><path d="M140 100 C128 98 118 100 114 104"/><path d="M74 232 C80 252 96 262 110 264 C124 262 140 252 146 232"/><circle cx="91" cy="352" r="6"/><circle cx="129" cy="352" r="6"/><path d="M96 176 C102 186 118 186 124 176"/><path d="M92 196 L128 196"/><path d="M93 214 L127 214"/></g>
+            <g class="vessels"><path class="vessel" d="M104 62 C102 76 102 96 102 112 C100 130 100 200 102 236"/><path class="vein" d="M104 62 C102 76 102 96 102 112 C100 130 100 200 102 236"/><path class="vessel" d="M102 236 C94 254 88 270 86 296 C84 336 86 384 84 424"/><path class="vein" d="M102 236 C94 254 88 270 86 296 C84 336 86 384 84 424"/><path class="vessel" d="M102 236 C112 254 118 270 120 296 C122 336 120 384 122 424"/><path class="vein" d="M102 236 C112 254 118 270 120 296 C122 336 120 384 122 424"/><path class="vessel" d="M104 114 C128 100 158 102 170 126 C176 158 182 194 190 236"/><path class="vein" d="M104 114 C128 100 158 102 170 126 C176 158 182 194 190 236"/><path class="vessel" d="M100 114 C80 100 62 102 50 126 C44 158 38 194 30 236"/><path class="vein" d="M100 114 C80 100 62 102 50 126 C44 158 38 194 30 236"/><path class="vessel" d="M114 128 C110 112 110 96 110 76 L110 62"/><path class="art" d="M114 128 C110 112 110 96 110 76 L110 62"/><path class="vessel" d="M110 62 C108 54 106 46 104 38"/><path class="art" d="M110 62 C108 54 106 46 104 38"/><path class="vessel" d="M110 62 C112 54 114 46 116 38"/><path class="art" d="M110 62 C112 54 114 46 116 38"/><path class="vessel" d="M113 120 C108 150 108 200 110 236"/><path class="art" d="M113 120 C108 150 108 200 110 236"/><path class="vessel" d="M110 236 C100 254 94 270 92 296 C90 336 92 384 90 424"/><path class="art" d="M110 236 C100 254 94 270 92 296 C90 336 92 384 90 424"/><path class="vessel" d="M110 236 C120 254 126 270 128 296 C130 336 128 384 130 424"/><path class="art" d="M110 236 C120 254 126 270 128 296 C130 336 128 384 130 424"/><path class="vessel" d="M112 112 C132 104 154 108 164 124 C170 156 176 192 184 236"/><path class="art" d="M112 112 C132 104 154 108 164 124 C170 156 176 192 184 236"/><path class="vessel" d="M108 112 C88 104 66 108 56 124 C50 156 44 192 36 236"/><path class="art" d="M108 112 C88 104 66 108 56 124 C50 156 44 192 36 236"/></g>
+          </g>
+          <g class="region" data-region="mind" tabindex="0" role="button" aria-label="Mind and sleep">
+            <ellipse class="zone" transform="translate(110 0)" cx="110" cy="44" rx="22" ry="28"></ellipse>
+            <line class="lead" x1="220" y1="44" x2="312" y2="44"/><circle class="dot" cx="220" cy="44" r="3"/><text class="lbl" x="318" y="48" text-anchor="start" data-i18n="region.mind.title">region.mind.title</text>
+          </g>
+          <g class="region" data-region="immune" tabindex="0" role="button" aria-label="Immune system">
+            <rect class="zone" transform="translate(110 0)" x="99" y="73" width="22" height="15" rx="7"></rect>
+            <line class="lead" x1="220" y1="81" x2="128" y2="81"/><circle class="dot" cx="220" cy="81" r="3"/><text class="lbl" x="122" y="85" text-anchor="end" data-i18n="region.immune.title">region.immune.title</text>
+          </g>
+          <g class="region" data-region="heart" tabindex="0" role="button" aria-label="Heart and circulation">
+            <g transform="translate(110 0)"><path class="zone beat" d="M114 152 C96 138 94 122 104 119 C109 118 113 121 114 126 C115 121 119 118 124 119 C134 122 132 138 114 152 Z"></path></g>
+            <line class="lead" x1="224" y1="135" x2="312" y2="135"/><circle class="dot" cx="224" cy="135" r="3"/><text class="lbl" x="318" y="139" text-anchor="start" data-i18n="region.heart.title">region.heart.title</text>
+          </g>
+          <g class="region" data-region="metabolism" tabindex="0" role="button" aria-label="Metabolism">
+            <ellipse class="zone" transform="translate(110 0)" cx="110" cy="205" rx="26" ry="28"></ellipse>
+            <line class="lead" x1="220" y1="205" x2="128" y2="205"/><circle class="dot" cx="220" cy="205" r="3"/><text class="lbl" x="122" y="209" text-anchor="end" data-i18n="region.metabolism.title">region.metabolism.title</text>
+          </g>
+          <g class="region" data-region="whole" tabindex="0" role="button" aria-label="Whole body temperature">
+            <path class="zone" transform="translate(110 0)" d="M119.0 88.0 C122.5 89.3 132.8 93.5 140.0 96.0 C147.2 98.5 156.5 99.7 162.0 103.0 C167.5 106.3 170.2 108.2 173.0 116.0 C175.8 123.8 177.0 137.7 179.0 150.0 C181.0 162.3 183.0 179.3 185.0 190.0 C187.0 200.7 189.3 207.0 191.0 214.0 C192.7 221.0 194.2 226.7 195.0 232.0 C195.8 237.3 197.0 242.8 196.0 246.0 C195.0 249.2 191.2 251.0 189.0 251.0 C186.8 251.0 184.5 249.2 183.0 246.0 C181.5 242.8 181.2 237.3 180.0 232.0 C178.8 226.7 178.0 222.0 176.0 214.0 C174.0 206.0 170.7 194.7 168.0 184.0 C165.3 173.3 162.2 159.0 160.0 150.0 C157.8 141.0 155.8 133.3 155.0 130.0 Z M101.0 88.0 C97.5 89.3 87.2 93.5 80.0 96.0 C72.8 98.5 63.5 99.7 58.0 103.0 C52.5 106.3 49.8 108.2 47.0 116.0 C44.2 123.8 43.0 137.7 41.0 150.0 C39.0 162.3 37.0 179.3 35.0 190.0 C33.0 200.7 30.7 207.0 29.0 214.0 C27.3 221.0 25.8 226.7 25.0 232.0 C24.2 237.3 23.0 242.8 24.0 246.0 C25.0 249.2 28.8 251.0 31.0 251.0 C33.2 251.0 35.5 249.2 37.0 246.0 C38.5 242.8 38.8 237.3 40.0 232.0 C41.2 226.7 42.0 222.0 44.0 214.0 C46.0 206.0 49.3 194.7 52.0 184.0 C54.7 173.3 57.8 159.0 60.0 150.0 C62.2 141.0 64.2 133.3 65.0 130.0 Z M74 228 L146 228 C150 246 140 262 110 270 C80 262 70 246 74 228 Z"></path>
+            <line class="lead" x1="140" y1="236" x2="128" y2="236"/><circle class="dot" cx="140" cy="236" r="3"/><text class="lbl" x="122" y="240" text-anchor="end" data-i18n="region.whole.title">region.whole.title</text>
+          </g>
+          <g class="region" data-region="bones" tabindex="0" role="button" aria-label="Bones and muscle">
+            <path class="zone" transform="translate(110 0)" d="M149.0 262.0 C148.5 268.3 147.0 287.8 146.0 300.0 C145.0 312.2 143.8 326.3 143.0 335.0 C142.2 343.7 141.3 343.7 141.0 352.0 C140.7 360.3 141.7 374.5 141.0 385.0 C140.3 395.5 137.5 407.5 137.0 415.0 C136.5 422.5 136.8 426.3 138.0 430.0 C139.2 433.7 146.3 435.8 144.0 437.0 C141.7 438.2 127.5 438.5 124.0 437.0 C120.5 435.5 123.0 436.7 123.0 428.0 C123.0 419.3 124.2 397.7 124.0 385.0 C123.8 372.3 122.7 360.3 122.0 352.0 C121.3 343.7 120.7 343.7 120.0 335.0 C119.3 326.3 119.0 311.5 118.0 300.0 C117.0 288.5 115.0 272.3 114.0 266.0 C113.0 259.7 112.3 262.7 112.0 262.0 Z M71.0 262.0 C71.5 268.3 73.0 287.8 74.0 300.0 C75.0 312.2 76.2 326.3 77.0 335.0 C77.8 343.7 78.7 343.7 79.0 352.0 C79.3 360.3 78.3 374.5 79.0 385.0 C79.7 395.5 82.5 407.5 83.0 415.0 C83.5 422.5 83.2 426.3 82.0 430.0 C80.8 433.7 73.7 435.8 76.0 437.0 C78.3 438.2 92.5 438.5 96.0 437.0 C99.5 435.5 97.0 436.7 97.0 428.0 C97.0 419.3 95.8 397.7 96.0 385.0 C96.2 372.3 97.3 360.3 98.0 352.0 C98.7 343.7 99.3 343.7 100.0 335.0 C100.7 326.3 101.0 311.5 102.0 300.0 C103.0 288.5 105.0 272.3 106.0 266.0 C107.0 259.7 107.7 262.7 108.0 262.0 Z"></path>
+            <line class="lead" x1="240" y1="340" x2="312" y2="340"/><circle class="dot" cx="240" cy="340" r="3"/><text class="lbl" x="318" y="344" text-anchor="start" data-i18n="region.bones.title">region.bones.title</text>
+          </g>
+          <rect class="scan" x="110" y="0" width="220" height="2" fill="url(#scanfade)" aria-hidden="true"/>
+          <text x="220" y="450" text-anchor="middle" class="svg-note" data-i18n="schematic">Schematic only</text>
+        </svg>
+        <ul id="region-list" class="region-list"></ul>
+      </div>
+    </section>
+
+    <aside class="rail rail-right" aria-label="Analysis">
+      <section class="card summary" aria-live="polite">
+        <div id="overall" class="overall"></div>
+      </section>
+      <section class="card detail" aria-labelledby="h-detail" aria-live="polite">
+        <h2 id="h-detail" data-i18n="details">Details</h2>
+        <div id="detail"><p class="hint">Select a body region to see its indicators.</p></div>
+      </section>
+    </aside>
+  </main>
+  </div>
+
+  <div id="view-compare" hidden><div class="layout1"><section class="card" id="cmp"></section></div></div>
+  <div id="view-osdr" hidden><div class="layout1"><section class="card" id="osdr"></section></div></div>
+
+  <footer>
+    <p data-i18n="footer">Draft explanatory texts are not yet verified against NASA HRP sources. Simulated data uses arbitrary, fictional parameters.
+       Status levels use configurable statistical cut-offs (|z| ≥ 2 and ≥ 3 relative to your first 7 readings), not clinical thresholds.</p>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/osdr.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/demo.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
