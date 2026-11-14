@@ -111,14 +111,19 @@
   }
 
   /* ---------- Dashboard: pre-flight vs post-flight (real OSDR data, descriptive) ---------- */
-  function renderPrePost(ctx, box) {
+  // opts.sub = true: shown inside the "Real data" tab (sub-heading, no repeated badge)
+  function renderPrePost(ctx, box, opts) {
     var t = ctx.t, O = ctx.Osdr;
     box.innerHTML = '';
-    box.appendChild(el('h2', { text: t('pp.title') }));
-    box.appendChild(el('div', { class: 'badge real', text: t('osdr.badge') }));
+    if (opts && opts.sub) {
+      box.appendChild(el('h3', { text: t('pp.title') }));
+    } else {
+      box.appendChild(el('h2', { text: t('pp.title') }));
+      box.appendChild(el('div', { class: 'badge real', text: t('osdr.badge') }));
+    }
     box.appendChild(el('p', { class: 'msg', text: t('pp.intro') }));
     box.appendChild(picker(ctx, O.crewIds().map(function (c) { return { id: c, label: c }; }), sel.crew,
-      function (id) { sel.crew = id; renderPrePost(ctx, box); }, t('pp.crew')));
+      function (id) { sel.crew = id; renderPrePost(ctx, box, opts); }, t('pp.crew')));
 
     var data = O.prePost(sel.crew);
     var posts = O.TIMEPOINTS.slice(O.PRE);
@@ -197,6 +202,9 @@
     O.outsideAt(sel.analyte, 2).forEach(function (o) {
       box.appendChild(el('div', { class: 'callout', role: 'note', text: t('osdr.out', { tp: o.tp, n: o.n, total: o.total, min: o.min, max: o.max, unit: an.unit }) }));
     });
+    var pp = el('div', { class: 'prepost-sub' });
+    box.appendChild(pp);
+    renderPrePost(ctx, pp, { sub: true });
     box.appendChild(el('p', { class: 'msg', text: t('osdr.limits') }));
     box.appendChild(el('p', { class: 'meta', text: t('osdr.fileNote') }));
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
