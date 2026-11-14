@@ -151,7 +151,79 @@
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
   }
 
-  /* ---------- Real data: OSD-635 study information (metadata only, no gene results yet) ---------- */
+  /* ---------- OSD-635 gene results (table is loaded on demand: js/osd635-genes.js) ---------- */
+  var genesWaiting = null;
+  function loadGenes(ok, fail) {
+    if (root.Osd635Genes) { ok(); return; }
+    if (genesWaiting) { genesWaiting.push({ ok: ok, fail: fail }); return; }
+    genesWaiting = [{ ok: ok, fail: fail }];
+    var sc = document.createElement('script');
+    sc.src = 'js/osd635-genes.js';
+    sc.onload = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.ok(); }); };
+    sc.onerror = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.fail(); }); };
+    document.head.appendChild(sc);
+  }
+
+  function fmtP(p) { return p === null ? '—' : (p < 0.001 ? p.toExponential(2) : p.toFixed(4)); }
+  function fmtMean(x) { return x === null ? '—' : x.toFixed(1); }
+
+  function geneTable(ctx, genes, withEnsembl) {
+    var t = ctx.t, Ex = ctx.Expression;
+    var cols = ['ge.h.gene'].concat(withEnsembl ? ['ge.h.ensembl'] : [], ['ge.h.log2fc', 'ge.h.fc', 'ge.h.padj', 'ge.h.class', 'ge.h.flight', 'ge.h.ground']);
+    var head = el('tr', null, cols.map(function (k) { return el('th', { scope: 'col', text: t(k) }); }));
+    var body = el('tbody');
+    genes.forEach(function (g) {
+      var cls = Ex.classify(g.log2fc, g.padj);
+      var arrow = cls === 'up' ? '▲ ' : cls === 'down' ? '▼ ' : '';
+      var fc = g.log2fc === null ? '—' : Ex.foldChange(g.log2fc).toFixed(2);
+      var cells = [el('th', { scope: 'row' }, [g.symbol || g.ensembl, g.name ? el('div', { class: 'meta', text: g.name }) : null])];
+      if (withEnsembl) cells.push(el('td', { text: g.ensembl }));
+      cells.push(el('td', { text: g.log2fc === null ? '—' : g.log2fc.toFixed(2) }), el('td', { text: fc }), el('td', { text: fmtP(g.padj) }),
+        el('td', { text: arrow + t('ge.c.' + cls) }), el('td', { text: fmtMean(g.flightMean) }), el('td', { text: fmtMean(g.groundMean) }));
+      body.appendChild(el('tr', null, cells));
+    });
+    return el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), body])]);
+  }
+
+  function renderGenes(ctx, box) {
+    var t = ctx.t, O = ctx.Osd635, Ex = ctx.Expression, D = root.Osd635Genes;
+    box.innerHTML = '';
+    var D0 = Ex.DEFAULTS, a = O.analyze(D);
+    box.appendChild(el('h4', { text: t('ge.title') }));
+    box.appendChild(el('p', { class: 'msg', text: t('ge.contrast') }));
+    box.appendChild(el('p', { class: 'hint', text: t('ge.thresholds', { p: D0.padj, l: D0.log2fc, f: Ex.foldChange(D0.log2fc).toFixed(2) }) }));
+
+    var sb = el('tbody');
+    Ex.CLASSES.forEach(function (c) {
+      if (c === 'nodata' && !a.counts.nodata) return;
+      sb.appendChild(el('tr', null, [el('th', { scope: 'row', text: (c === 'up' ? '▲ ' : c === 'down' ? '▼ ' : '') + t('ge.c.' + c) }), el('td', { text: a.counts[c].toLocaleString('en-US') })]));
+    });
+    sb.appendChild(el('tr', { class: 'sumrow' }, [el('th', { scope: 'row', text: t('ge.total') }), el('td', { text: a.total.toLocaleString('en-US') })]));
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [el('tr', null, [el('th', { scope: 'col', text: t('ge.h.class') }), el('th', { scope: 'col', text: t('ge.h.count') })])]), sb])]));
+    box.appendChild(el('p', { class: 'meta', text: t('ge.stated', { stated: O.STUDY.statedSignificantGenes.toLocaleString('en-US'), n: (a.counts.up + a.counts.down).toLocaleString('en-US') }) }));
+
+    box.appendChild(el('h4', { text: t('ge.featured') }));
+    box.appendChild(geneTable(ctx, O.bySymbol(D, O.FEATURED), false));
+
+    var lab = el('label', { class: 'genesearch' }, [el('span', { text: t('ge.search') }), el('input', { type: 'search', maxlength: '40', autocomplete: 'off', placeholder: t('ge.searchPh') })]);
+    var res = el('div', { 'aria-live': 'polite' });
+    box.appendChild(lab); box.appendChild(res);
+    lab.querySelector('input').addEventListener('input', function (ev) {
+      var q = ev.target.value; res.innerHTML = '';
+      if (!q.trim()) return;
+      var hits = O.find(D, q, 10);
+      res.appendChild(hits.length ? geneTable(ctx, hits, true) : el('p', { class: 'empty', text: t('ge.none') }));
+    });
+
+    ['up', 'down'].forEach(function (c) {
+      box.appendChild(el('h4', { text: t(c === 'up' ? 'ge.topUp' : 'ge.topDown') }));
+      box.appendChild(geneTable(ctx, O.top(D, c, 10), true));
+    });
+    box.appendChild(el('p', { class: 'meta', text: t('ge.topNote') }));
+    box.appendChild(el('p', { class: 'msg', text: t('ge.note') }));
+  }
+
+  /* ---------- Real data: OSD-635 study information ---------- */
   function renderOsd635(ctx, box) {
     var t = ctx.t, O = ctx.Osd635, S = O.STUDY;
     box.innerHTML = '';
@@ -182,8 +254,10 @@
     });
     box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), body])]));
 
-    box.appendChild(el('div', { class: 'callout', role: 'note', text: t('o6.pending', { file: S.resultsFile }) }));
-    box.appendChild(el('p', { class: 'meta', text: t('o6.stated', { n: S.statedSignificantGenes.toLocaleString('en-US') }) }));
+    var gbox = el('div', { class: 'genes' });
+    box.appendChild(gbox);
+    gbox.appendChild(el('p', { class: 'hint', text: t('ge.loading') }));
+    loadGenes(function () { renderGenes(ctx, gbox); }, function () { gbox.innerHTML = ''; gbox.appendChild(el('p', { class: 'callout', role: 'alert', text: t('ge.error') })); });
     box.appendChild(el('p', { class: 'meta' }, [t('o6.source', { files: S.sourceFiles.join(', ') }) + ' ', el('a', { href: O.DOI_URL, target: '_blank', rel: 'noopener noreferrer', text: t('o6.paper') })]));
   }
 
