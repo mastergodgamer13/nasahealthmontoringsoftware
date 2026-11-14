@@ -66,6 +66,26 @@
     };
   }
 
+  /**
+   * Pre-flight vs post-flight view for ONE crew member, all analytes. Descriptive only:
+   * pre-flight = first PRE time points (L-92, L-44, L-3), post-flight = the rest.
+   * vsPre: 'below' | 'above' | null = post value outside that person's OWN pre-flight min-max.
+   */
+  function prePost(crew) {
+    var out = {};
+    Object.keys(ANALYTES).forEach(function (a) {
+      var s = summary(crew, a);
+      var lo = Math.min.apply(null, s.pre), hi = Math.max.apply(null, s.pre);
+      out[a] = {
+        preMean: s.preMean, preMin: lo, preMax: hi,
+        post: s.points.filter(function (p) { return p.post; }).map(function (p) {
+          return { tp: p.tp, value: p.value, delta: p.delta, flag: p.flag, vsPre: p.value < lo ? 'below' : p.value > hi ? 'above' : null };
+        })
+      };
+    });
+    return out;
+  }
+
   /** Time points where at least `minCount` crew members are outside the dataset's lab range. */
   function outsideAt(analyte, minCount) {
     var res = [];
@@ -81,7 +101,7 @@
 
   var api = {
     STUDY: 'OSD-575', TIMEPOINTS: TIMEPOINTS, PRE: PRE, ANALYTES: ANALYTES, CREW: CREW,
-    crewIds: crewIds, flag: flag, summary: summary, outsideAt: outsideAt,
+    crewIds: crewIds, flag: flag, summary: summary, prePost: prePost, outsideAt: outsideAt,
     SOURCE_URL: 'https://osdr.nasa.gov/geode-py/ws/studies/OSD-575/download?source=datamanager&file=LSDS-8_Comprehensive_Metabolic_Panel_CMP_TRANSFORMED.csv'
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Osdr = api;

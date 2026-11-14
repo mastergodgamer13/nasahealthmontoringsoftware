@@ -162,6 +162,15 @@
     'osdr.fileNote': 'The study text lists R+1, R+45 and R+82 as post-flight time points; the file also contains R+194.',
     'osdr.source': 'Source: NASA Open Science Data Repository, study OSD-575, file LSDS-8_Comprehensive_Metabolic_Panel_CMP_TRANSFORMED.csv. Values copied as published.',
     'osdr.link': 'Open the source file',
+    'pp.title': 'Pre-flight vs post-flight (real NASA OSDR data)',
+    'pp.intro': 'For each crew member, post-flight values (R+n) are compared with that person\'s own pre-flight values (L-92, L-44, L-3), as split in the OSD-575 study file.',
+    'pp.crew': 'Crew member',
+    'pp.pre': 'Pre-flight (mean)',
+    'pp.post': 'Post-flight',
+    'pp.range': 'pre-flight range',
+    'pp.below': 'below own pre-flight range',
+    'pp.above': 'above own pre-flight range',
+    'pp.note': 'Descriptive only: three pre-flight values and four people are not enough for statistics or conclusions. Not a diagnosis.',
     'users.legacyName': 'My earlier entries'
   };
 
@@ -306,6 +315,15 @@
     'osdr.fileNote': 'Çalışma metni uçuş sonrası zaman noktaları olarak R+1, R+45 ve R+82’yi listeliyor; dosyada ayrıca R+194 de var.',
     'osdr.source': 'Kaynak: NASA Open Science Data Repository, OSD-575 çalışması, LSDS-8_Comprehensive_Metabolic_Panel_CMP_TRANSFORMED.csv dosyası. Değerler yayımlandığı gibi kopyalandı.',
     'osdr.link': 'Kaynak dosyayı aç',
+    'pp.title': 'Uçuş öncesi ve sonrası (gerçek NASA OSDR verisi)',
+    'pp.intro': 'Her mürettebat üyesi için uçuş sonrası değerler (R+n), OSD-575 çalışma dosyasındaki gibi, kişinin kendi uçuş öncesi değerleriyle (L-92, L-44, L-3) karşılaştırılır.',
+    'pp.crew': 'Mürettebat üyesi',
+    'pp.pre': 'Uçuş öncesi (ortalama)',
+    'pp.post': 'Uçuş sonrası',
+    'pp.range': 'uçuş öncesi aralık',
+    'pp.below': 'kendi uçuş öncesi aralığının altında',
+    'pp.above': 'kendi uçuş öncesi aralığının üstünde',
+    'pp.note': 'Yalnızca betimleyicidir: uçuş öncesi üç değer ve dört kişi istatistik veya sonuç çıkarmak için yeterli değildir. Tanı değildir.',
     'users.legacyName': 'Önceki girdilerim'
   };
 
@@ -450,6 +468,15 @@
     'osdr.fileNote': 'Il testo dello studio elenca R+1, R+45 e R+82 come punti post-volo; il file contiene anche R+194.',
     'osdr.source': 'Fonte: NASA Open Science Data Repository, studio OSD-575, file LSDS-8_Comprehensive_Metabolic_Panel_CMP_TRANSFORMED.csv. Valori copiati come pubblicati.',
     'osdr.link': 'Apri il file sorgente',
+    'pp.title': 'Prima e dopo il volo (dati reali NASA OSDR)',
+    'pp.intro': 'Per ogni membro dell\'equipaggio, i valori dopo il volo (R+n) sono confrontati con i suoi stessi valori prima del volo (L-92, L-44, L-3), come nel file dello studio OSD-575.',
+    'pp.crew': 'Membro dell\'equipaggio',
+    'pp.pre': 'Prima del volo (media)',
+    'pp.post': 'Dopo il volo',
+    'pp.range': 'intervallo prima del volo',
+    'pp.below': 'sotto il suo intervallo pre-volo',
+    'pp.above': 'sopra il suo intervallo pre-volo',
+    'pp.note': 'Solo descrittivo: tre valori prima del volo e quattro persone non bastano per statistiche o conclusioni. Non è una diagnosi.',
     'users.legacyName': 'Le mie voci precedenti'
   };
 
@@ -594,6 +621,15 @@
     'osdr.fileNote': 'El texto del estudio enumera R+1, R+45 y R+82 como momentos posvuelo; el archivo también contiene R+194.',
     'osdr.source': 'Fuente: NASA Open Science Data Repository, estudio OSD-575, archivo LSDS-8_Comprehensive_Metabolic_Panel_CMP_TRANSFORMED.csv. Valores copiados tal como se publicaron.',
     'osdr.link': 'Abrir el archivo fuente',
+    'pp.title': 'Antes y después del vuelo (datos reales NASA OSDR)',
+    'pp.intro': 'Para cada miembro de la tripulación, los valores posteriores al vuelo (R+n) se comparan con sus propios valores previos al vuelo (L-92, L-44, L-3), como en el archivo del estudio OSD-575.',
+    'pp.crew': 'Miembro de la tripulación',
+    'pp.pre': 'Antes del vuelo (media)',
+    'pp.post': 'Después del vuelo',
+    'pp.range': 'rango previo al vuelo',
+    'pp.below': 'por debajo de su rango previo al vuelo',
+    'pp.above': 'por encima de su rango previo al vuelo',
+    'pp.note': 'Solo descriptivo: tres valores previos al vuelo y cuatro personas no bastan para estadísticas ni conclusiones. No es un diagnóstico.',
     'users.legacyName': 'Mis registros anteriores'
   };
 

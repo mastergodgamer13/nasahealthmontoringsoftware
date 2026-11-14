@@ -209,6 +209,7 @@
     applyStatic(); updateFormLabels();
     renderTabs(); renderUsers();
     renderBadge(); renderOverall(); renderBody(); renderDetail();
+    if (state.tab === 'dash') Views.renderPrePost(ctx(), $('prepost'));
     if (state.tab === 'compare') Views.renderCompare(ctx(), $('cmp'));
     if (state.tab === 'osdr') Views.renderOsdr(ctx(), $('osdr'));
   }
