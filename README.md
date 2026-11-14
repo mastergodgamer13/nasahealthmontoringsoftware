@@ -112,3 +112,7 @@ tests/osdr.test.js  unit tests (real data)
 1. Verify and cite explanatory texts and hazard mapping from NASA HRP resources.
 2. Decide which reference ranges (if any) to add, with sources.
 3. Add measurement reminders and a bone/muscle or immune-related input if a sourced indicator is chosen.
+
+## Immune indicator
+
+The Immune system region now has a status chip. It uses the user's own white blood cell, neutrophil and lymphocyte values (immune form): baseline = the three pre-flight values (L-92, L-44, L-3), recent = the latest up to 3 post-flight values, z = (recent mean − baseline mean) / baseline SD, with the same cut-offs as the other indicators (|z| ≥ 2 watch, |z| ≥ 3 attention). With fewer than 3 pre-flight values, no post-flight value or no variation it stays "no data" (never "usual"). With only three baseline values the estimate is rough, and this is a statistical deviation, not a clinical threshold or a diagnosis. Demo mode has no immune data. Code: `Immune.assess` in `js/immune.js`.

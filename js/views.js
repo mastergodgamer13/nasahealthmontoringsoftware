@@ -158,7 +158,7 @@
     if (genesWaiting) { genesWaiting.push({ ok: ok, fail: fail }); return; }
     genesWaiting = [{ ok: ok, fail: fail }];
     var sc = document.createElement('script');
-    sc.src = 'js/osd635-genes.js?v=20261114d';
+    sc.src = 'js/osd635-genes.js?v=20261114e';
     sc.onload = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.ok(); }); };
     sc.onerror = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.fail(); }); };
     document.head.appendChild(sc);
@@ -421,13 +421,25 @@
   }
 
   /* ---------- the user's own immune cell values (descriptive; never a status) ---------- */
-  function renderImmuneOwn(ctx, box, records, inRegion) {
+  function renderImmuneOwn(ctx, box, records, inRegion, assess) {
     var t = ctx.t, I = ctx.Immune;
     box.innerHTML = '';
     var sum = I.summary(records);
     if (inRegion) {
       box.appendChild(el('h4', { text: t('im.own.title') }));
       box.appendChild(el('div', { class: 'badge man', text: t('im.own.badge') }));
+      if (assess) {
+        Object.keys(I.ANALYTES).forEach(function (a) {
+          var res = assess.per[a], an = I.ANALYTES[a], wrap = el('div', { class: 'ind' });
+          wrap.appendChild(el('div', { class: 'ind-head' }, [el('div', null, [el('strong', { text: t('o9.a.' + a) }), ' ', ctx.chip(res.status)])]));
+          wrap.appendChild(el('p', { class: 'msg', text: t('msg.' + res.status) }));
+          var meta = res.status === 'nodata' ? t('reason.' + res.reasonCode, res.reasonParams)
+            : t('im.stat.meta', { mean: res.baseline.mean.toFixed(an.decimals + 1), sd: res.baseline.sd.toFixed(an.decimals + 1), n: res.baseline.n, rn: res.recentN, rmean: res.recentMean.toFixed(an.decimals + 1), unit: an.unit, z: res.z.toFixed(1) });
+          wrap.appendChild(el('div', { class: 'meta', text: meta }));
+          box.appendChild(wrap);
+        });
+        box.appendChild(el('p', { class: 'msg', text: t('im.stat.note') }));
+      }
     }
     if (!sum.tps.length) { box.appendChild(el('p', { class: 'empty', text: t(inRegion ? 'im.own.empty' : 'im.none') })); return; }
     var names = Object.keys(I.ANALYTES);

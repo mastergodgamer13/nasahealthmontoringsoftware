@@ -13,7 +13,7 @@
 (function (root) {
   'use strict';
 
-  // osdr: real crew blood-count analytes (NASA OSDR OSD-569) shown as REFERENCE data in the region; they never change the region's status.
+  // own: the user's own immune cell values (immune.js) feed this region's status; osdr: real crew blood-count analytes (NASA OSDR OSD-569) shown as REFERENCE data in the region; they never change the region's status.
   // hazard keys -> i18n 'hazard.<key>'. The mapping is PROPOSED, not source-verified.
   var REGIONS = {
     mind:       { indicators: ['sleep', 'mood'],   hazards: ['isolation', 'closed'] },
@@ -21,7 +21,7 @@
     metabolism: { indicators: ['glucose'],         hazards: ['nutrition'] },
     whole:      { indicators: ['temp'],            hazards: ['closed'] },
     bones:      { indicators: [],                  hazards: ['gravity'] },
-    immune:     { indicators: [],                  hazards: ['radiation', 'isolation'], osdr: ['wbc', 'neut', 'lymph'] }
+    immune:     { indicators: [],                  hazards: ['radiation', 'isolation'], own: ['wbc', 'neut', 'lymph'], osdr: ['wbc', 'neut', 'lymph'] }
   };
 
   var api = { REGIONS: REGIONS };
