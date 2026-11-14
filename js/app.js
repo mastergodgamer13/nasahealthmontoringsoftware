@@ -192,7 +192,7 @@
 
   var viewCtx = null;
   function ctx() {
-    if (!viewCtx) viewCtx = { t: t, Core: Core, Osdr: Osdr, Osd635: Osd635, Expression: Expression, store: store, chip: chip, indLabel: indLabel, unitOf: unitOf, fmt: fmt };
+    if (!viewCtx) viewCtx = { t: t, Core: Core, Osdr: Osdr, Osd635: Osd635, Osd569: Osd569, Expression: Expression, store: store, chip: chip, indLabel: indLabel, unitOf: unitOf, fmt: fmt };
     return viewCtx;
   }
 
