@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
 
-  var sel = { cmpInd: 'hr', analyte: 'glucose', crew: 'C001' };
+  var sel = { cmpInd: 'hr', analyte: 'glucose', crew: 'C001', cbc: 'wbc', tool: 'pipeline-transcriptome-de' };
 
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
@@ -202,6 +202,17 @@
     box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [el('tr', null, [el('th', { scope: 'col', text: t('ge.h.class') }), el('th', { scope: 'col', text: t('ge.h.count') })])]), sb])]));
     box.appendChild(el('p', { class: 'meta', text: t('ge.stated', { stated: O.STUDY.statedSignificantGenes.toLocaleString('en-US'), n: (a.counts.up + a.counts.down).toLocaleString('en-US') }) }));
 
+    var pts = [], clip = 0, XL = 14, YL = 100;
+    D.rows.forEach(function (r) {
+      if (r[3] === null || r[4] === null) return;
+      var y = r[4] > 0 ? -Math.log10(r[4]) : YL; if (y > YL) clip++;
+      pts.push({ x: r[3], y: y, c: Ex.classify(r[3], r[4]) });
+    });
+    box.appendChild(el('h4', { text: t('ge.volTitle') }));
+    box.appendChild(Charts.volcano({ points: pts, xLimit: XL, yLimit: YL, xCut: D0.log2fc, yCut: -Math.log10(D0.padj), xLabel: t('ge.volX'), yLabel: t('ge.volY'), aria: t('ge.volAria', { n: pts.length.toLocaleString('en-US') }) }));
+    box.appendChild(Charts.classLegend(['up', 'down', 'below', 'ns'].map(function (c) { return { cls: c, text: t('ge.c.' + c) }; })));
+    box.appendChild(el('p', { class: 'meta', text: t('ge.volNote', { y: YL, n: clip }) }));
+
     box.appendChild(el('h4', { text: t('ge.featured') }));
     box.appendChild(geneTable(ctx, O.bySymbol(D, O.FEATURED), false));
 
@@ -283,6 +294,28 @@
     // complete blood count, pre-flight vs post-flight, per crew member (shared crew picker)
     box.appendChild(el('h4', { text: t('o9.cbc.title') }));
     box.appendChild(el('p', { class: 'msg', text: t('o9.cbc.intro') }));
+    // chart: one CBC analyte over time, one line per crew member, laboratory range(s) as shaded band(s)
+    box.appendChild(picker(ctx, O.ANALYTES.map(function (a) { return { id: a.id, label: t('o9.a.' + a.id) }; }), sel.cbc,
+      function (id) { sel.cbc = id; renderOsd569(ctx, box); }, t('osdr.analyte')));
+    var can = O.analyte(sel.cbc), crewList = O.crewIds(), rg = {}, bands = [];
+    crewList.forEach(function (c) {
+      var k = O.CREW[c][sel.cbc];
+      k.values.forEach(function (v, i) { if (k.lo[i] !== null && k.hi[i] !== null && !rg[k.lo[i] + '–' + k.hi[i]]) { rg[k.lo[i] + '–' + k.hi[i]] = 1; bands.push({ lo: k.lo[i], hi: k.hi[i] }); } });
+    });
+    box.appendChild(el('p', { class: 'hint', text: t('o9.cbc.range', { r: Object.keys(rg).join('; '), unit: can.unit }) }));
+    var clabel = t('o9.a.' + sel.cbc);
+    box.appendChild(Charts.multiChart({
+      series: crewList.map(function (c) {
+        var k = O.CREW[c][sel.cbc], pts = [];
+        k.values.forEach(function (v, i) { if (v !== null) pts.push({ x: i, y: v, title: O.TIMEPOINTS[i] + ' (' + c + '): ' + v.toFixed(can.decimals) + ' ' + can.unit }); });
+        return { name: c, points: pts };
+      }),
+      xMin: 0, xMax: O.TIMEPOINTS.length - 1, bands: bands, unit: can.unit, decimals: can.decimals,
+      xTicks: O.TIMEPOINTS.map(function (tp, i) { return { x: i, text: tp }; }),
+      marks: [{ x: O.PRE - 0.5, text: t('osdr.flight') }],
+      aria: t('o9.cbc.chartAria', { label: clabel })
+    }));
+    box.appendChild(Charts.legend(crewList));
     box.appendChild(picker(ctx, O.crewIds().map(function (c) { return { id: c, label: c }; }), sel.crew,
       function (id) { sel.crew = id; renderOsd569(ctx, box); }, t('pp.crew')));
     var data = O.prePost(sel.crew), posts = O.TIMEPOINTS.slice(O.PRE);
@@ -317,6 +350,13 @@
     var D = Ex.DEFAULTS;
     box.appendChild(el('p', { class: 'hint', text: t('ge.thresholds', { p: D.padj, l: D.log2fc, f: Ex.foldChange(D.log2fc).toFixed(2) }) }));
     var classes = ['up', 'down', 'below', 'ns', 'nodata'];
+    box.appendChild(picker(ctx, O.TOOLS.map(function (k) { return { id: k, label: t('o9.g.tool.' + k) }; }), sel.tool,
+      function (id) { sel.tool = id; renderOsd569(ctx, box); }, t('o9.g.toolPick')));
+    box.appendChild(Charts.divergingBars({
+      rows: O.COMPARISONS.map(function (cmp) { var k = O.classCounts(cmp.id, sel.tool); return { label: cmp.id, down: k.down, up: k.up }; }),
+      downText: t('ge.c.down'), upText: t('ge.c.up'), aria: t('o9.g.chartAria', { tool: t('o9.g.tool.' + sel.tool) })
+    }));
+    box.appendChild(el('p', { class: 'meta', text: t('o9.g.chartNote') }));
     var gh = el('tr', null, [el('th', { scope: 'col', text: t('o9.g.col.cmp') }), el('th', { scope: 'col', text: t('o9.g.col.genes') }), el('th', { scope: 'col', text: '' })]);
     classes.forEach(function (c) { gh.appendChild(el('th', { scope: 'col', text: t('ge.c.' + c) })); });
     var gb = el('tbody');

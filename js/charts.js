@@ -24,6 +24,7 @@
    *   series: [{ name, points: [{x, y, title}] }],
    *   xMin, xMax, xTicks: [{x, text}],
    *   band: {lo, hi} | null,        // shaded reference band
+   *   bands: [{lo, hi}],            // several reference bands (e.g. different lab ranges)
    *   marks: [{x, text}],           // vertical dashed lines with a label
    *   unit, decimals, aria, width, height
    * }
@@ -33,7 +34,8 @@
     var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, 'class': 'chart', role: 'img', 'aria-label': opt.aria || '' });
     var ys = [];
     opt.series.forEach(function (s) { s.points.forEach(function (p) { ys.push(p.y); }); });
-    if (opt.band) { ys.push(opt.band.lo, opt.band.hi); }
+    var bands = opt.bands || (opt.band ? [opt.band] : []);
+    bands.forEach(function (b) { ys.push(b.lo, b.hi); });
     if (!ys.length) return svg;
     var lo = Math.min.apply(null, ys), hi = Math.max.apply(null, ys);
     if (hi === lo) { hi += 1; lo -= 1; }
@@ -49,9 +51,9 @@
       svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: gy, y2: gy, stroke: '#2b3860', 'stroke-width': 1, opacity: 0.6 }));
       svg.appendChild(svgEl('text', { x: L - 6, y: gy + 3, 'text-anchor': 'end' }, fmtNum(gv, opt.decimals)));
     }
-    if (opt.band) {
-      svg.appendChild(svgEl('rect', { x: L, y: Y(opt.band.hi), width: W - L - R, height: Y(opt.band.lo) - Y(opt.band.hi), fill: '#6aa8ff', opacity: 0.13 }));
-    }
+    bands.forEach(function (b) {
+      svg.appendChild(svgEl('rect', { x: L, y: Y(b.hi), width: W - L - R, height: Y(b.lo) - Y(b.hi), fill: '#6aa8ff', opacity: bands.length > 1 ? 0.09 : 0.13 }));
+    });
     (opt.marks || []).forEach(function (m) {
       svg.appendChild(svgEl('line', { x1: X(m.x), x2: X(m.x), y1: T, y2: H - B, stroke: '#9aa6c2', 'stroke-dasharray': '3 3' }));
       svg.appendChild(svgEl('text', { x: X(m.x) + 4, y: T + 9 }, m.text));
@@ -89,5 +91,71 @@
     return box;
   }
 
-  root.Charts = { multiChart: multiChart, legend: legend, color: color };
+
+  var CLS_COLOR = { up: '#ff7f6e', down: '#5ab4ff', below: '#f4e04d', ns: '#5b6a8c' };
+
+  /**
+   * Volcano plot on a canvas (22k points are too many for SVG).
+   * opt: { points: [{x, y, c}] (c = 'up'|'down'|'below'|'ns'), xLimit, yLimit (clip), xCut, yCut, xLabel, yLabel, aria }
+   * Points beyond the limits are drawn on the edge. Returns the canvas (and draws nothing if canvas is unsupported).
+   */
+  function volcano(opt) {
+    var W = 640, H = 340, L = 50, R = 14, T = 14, B = 40;
+    var cv = document.createElement('canvas');
+    cv.className = 'chart volcano'; cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', opt.aria || '');
+    var dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    cv.width = W * dpr; cv.height = H * dpr;
+    var ctx = cv.getContext && cv.getContext('2d');
+    if (!ctx) return cv;
+    ctx.scale(dpr, dpr);
+    var xl = opt.xLimit, yl = opt.yLimit;
+    function X(v) { return L + (W - L - R) * ((Math.max(-xl, Math.min(xl, v)) + xl) / (2 * xl)); }
+    function Y(v) { return T + (H - T - B) * (1 - Math.max(0, Math.min(yl, v)) / yl); }
+    ctx.fillStyle = '#0a0f18'; ctx.fillRect(0, 0, W, H);
+    ctx.font = '10px sans-serif'; ctx.fillStyle = '#9aa6c2'; ctx.strokeStyle = '#2b3860'; ctx.lineWidth = 1;
+    var i, v;
+    for (i = 0; i <= 4; i++) { v = yl * i / 4; ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(W - R, Y(v)); ctx.stroke(); ctx.textAlign = 'right'; ctx.fillText(String(Math.round(v)), L - 6, Y(v) + 3); }
+    for (i = -4; i <= 4; i++) { v = xl * i / 4; ctx.textAlign = 'center'; ctx.fillText(v.toFixed(0), X(v), H - B + 14); }
+    ctx.textAlign = 'center'; ctx.fillText(opt.xLabel || '', L + (W - L - R) / 2, H - 6);
+    ctx.save(); ctx.translate(12, T + (H - T - B) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(opt.yLabel || '', 0, 0); ctx.restore();
+    ['ns', 'below', 'down', 'up'].forEach(function (cls) { // significant classes drawn last, on top
+      ctx.fillStyle = CLS_COLOR[cls]; ctx.globalAlpha = cls === 'ns' ? 0.45 : 0.9;
+      opt.points.forEach(function (p) { if (p.c === cls) ctx.fillRect(X(p.x) - 1, Y(p.y) - 1, 2, 2); });
+    });
+    ctx.globalAlpha = 1; ctx.strokeStyle = '#9aa6c2'; ctx.setLineDash([4, 3]);
+    [-opt.xCut, opt.xCut].forEach(function (x) { ctx.beginPath(); ctx.moveTo(X(x), T); ctx.lineTo(X(x), H - B); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(L, Y(opt.yCut)); ctx.lineTo(W - R, Y(opt.yCut)); ctx.stroke(); ctx.setLineDash([]);
+    return cv;
+  }
+
+  /**
+   * Diverging bar chart (SVG): for each row, a bar to the left (down) and to the right (up). Labels with the numbers.
+   * opt: { rows: [{label, down, up}], downText, upText, aria }
+   */
+  function divergingBars(opt) {
+    var rowH = 20, W = 640, L = 150, R = 20, T = 22, H = T + opt.rows.length * rowH + 10;
+    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, 'class': 'chart', role: 'img', 'aria-label': opt.aria || '' });
+    var m = 1; opt.rows.forEach(function (r) { m = Math.max(m, r.down, r.up); });
+    var mid = L + (W - L - R) / 2, half = (W - L - R) / 2 - 24;
+    svg.appendChild(svgEl('line', { x1: mid, x2: mid, y1: T - 6, y2: H - 6, stroke: '#9aa6c2' }));
+    svg.appendChild(svgEl('text', { x: mid - 6, y: 12, 'text-anchor': 'end' }, '◀ ' + opt.downText));
+    svg.appendChild(svgEl('text', { x: mid + 6, y: 12 }, opt.upText + ' ▶'));
+    opt.rows.forEach(function (r, i) {
+      var y = T + i * rowH, dw = half * r.down / m, uw = half * r.up / m;
+      svg.appendChild(svgEl('text', { x: L - 8, y: y + 12, 'text-anchor': 'end' }, r.label));
+      if (r.down) svg.appendChild(svgEl('rect', { x: mid - dw, y: y + 2, width: dw, height: rowH - 6, fill: CLS_COLOR.down }));
+      if (r.up) svg.appendChild(svgEl('rect', { x: mid, y: y + 2, width: uw, height: rowH - 6, fill: CLS_COLOR.up }));
+      svg.appendChild(svgEl('text', { x: mid - dw - 4, y: y + 12, 'text-anchor': 'end' }, String(r.down)));
+      svg.appendChild(svgEl('text', { x: mid + uw + 4, y: y + 12 }, String(r.up)));
+    });
+    return svg;
+  }
+
+  function classLegend(items) { // items: [{cls, text}]
+    var box = document.createElement('div'); box.className = 'legend';
+    items.forEach(function (it) { var s = document.createElement('span'), sw = document.createElement('i'); sw.style.background = CLS_COLOR[it.cls]; s.appendChild(sw); s.appendChild(document.createTextNode(it.text)); box.appendChild(s); });
+    return box;
+  }
+
+  root.Charts = { multiChart: multiChart, legend: legend, color: color, volcano: volcano, divergingBars: divergingBars, classLegend: classLegend, CLS_COLOR: CLS_COLOR };
 })(typeof window !== 'undefined' ? window : globalThis);
