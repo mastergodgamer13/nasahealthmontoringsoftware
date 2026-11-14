@@ -28,4 +28,21 @@ test('glucose: three crew members outside the range at R+45', () => {
   const o = O.outsideAt('glucose', 2).filter(x => x.tp === 'R+45')[0];
   assert.ok(o); assert.strictEqual(o.n, 3); assert.strictEqual(o.min, 36); assert.strictEqual(o.max, 44);
 });
+test('describe: pooled descriptive statistics match pandas describe() (sample SD, linear quantiles)', () => {
+  const d = O.describe('glucose');
+  assert.strictEqual(d.n, 28); assert.strictEqual(d.min, 36); assert.strictEqual(d.max, 103);
+  assert.ok(Math.abs(d.mean - 76.4286) < 0.001); assert.ok(Math.abs(d.sd - 16.2284) < 0.01);
+  assert.ok(d.q1 <= d.median && d.median <= d.q3);
+  assert.ok(Math.abs(d.lower - (d.mean - 2 * d.sd)) < 1e-9 && Math.abs(d.upper - (d.mean + 2 * d.sd)) < 1e-9);
+});
+test('statOutliers: strictly outside pooled mean +/- 2 SD (glucose 44 is just inside)', () => {
+  const o = O.statOutliers('glucose').map(r => r.crew + '@' + r.tp + '=' + r.value).sort();
+  assert.deepStrictEqual(o, ['C003@R+45=36', 'C004@R+45=43']);
+  assert.deepStrictEqual(O.statOutliers('potassium').map(r => r.value), [5.9]);
+  assert.deepStrictEqual(O.statOutliers('albumin'), []);
+});
+test('statOutliers are independent of the laboratory range flags', () => {
+  const r = O.statOutliers('sodium')[0];
+  assert.strictEqual(r.value, 143); assert.strictEqual(O.flag('sodium', r.value), null);
+});
 console.log(n + ' osdr tests passed');

@@ -79,7 +79,45 @@
     return res;
   }
 
+  function mean(a) { return a.reduce(function (s, x) { return s + x; }, 0) / a.length; }
+  function sd(a) { // sample SD (n-1), same as pandas .std()
+    var m = mean(a);
+    return Math.sqrt(a.reduce(function (s, x) { return s + (x - m) * (x - m); }, 0) / (a.length - 1));
+  }
+  function quantile(sorted, q) { // linear interpolation, same as pandas .describe()
+    var pos = (sorted.length - 1) * q, lo = Math.floor(pos), hi = Math.ceil(pos);
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  }
+  function pooled(analyte) {
+    var rows = [];
+    crewIds().forEach(function (c) {
+      CREW[c][analyte].forEach(function (v, i) { rows.push({ crew: c, tp: TIMEPOINTS[i], value: v }); });
+    });
+    return rows;
+  }
+
+  /**
+   * Descriptive statistics over ALL values of one analyte (all crew, all time points pooled).
+   * Descriptive only: the 2-SD band is a statistical convention, NOT a clinical or laboratory threshold.
+   */
+  function describe(analyte) {
+    var rows = pooled(analyte), v = rows.map(function (r) { return r.value; });
+    var sorted = v.slice().sort(function (a, b) { return a - b; });
+    var m = mean(v), s = sd(v);
+    return {
+      n: v.length, mean: m, sd: s, min: sorted[0], q1: quantile(sorted, 0.25), median: quantile(sorted, 0.5),
+      q3: quantile(sorted, 0.75), max: sorted[sorted.length - 1], lower: m - 2 * s, upper: m + 2 * s
+    };
+  }
+
+  /** Values strictly outside pooled mean +/- 2 SD (statistical outliers; unrelated to the laboratory range). */
+  function statOutliers(analyte) {
+    var d = describe(analyte);
+    return pooled(analyte).filter(function (r) { return r.value > d.upper || r.value < d.lower; });
+  }
+
   var api = {
+    describe: describe, statOutliers: statOutliers,
     STUDY: 'OSD-575', TIMEPOINTS: TIMEPOINTS, PRE: PRE, ANALYTES: ANALYTES, CREW: CREW,
     crewIds: crewIds, flag: flag, summary: summary, outsideAt: outsideAt,
     SOURCE_URL: 'https://osdr.nasa.gov/geode-py/ws/studies/OSD-575/download?source=datamanager&file=LSDS-8_Comprehensive_Metabolic_Panel_CMP_TRANSFORMED.csv'

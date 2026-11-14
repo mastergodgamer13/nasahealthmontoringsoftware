@@ -13,7 +13,7 @@ Prototype for the **NASA Space Apps Challenge 2026** challenge *"Software for As
 - Two clearly separated data sources: **Simulated demo** (fictional, labelled) and **My users** (stored only in the browser's localStorage).
 - **Users:** add a user, select them, enter their values (up to 12 users; entries are per user).
 - **Compare users:** latest value and status per person plus an overlay chart. Each status compares a person with their *own* baseline; differences between people are not a health judgment.
-- **Real data (NASA OSDR):** study OSD-575 (SpaceX Inspiration4, four crew members, serum metabolic panel: glucose, potassium, sodium, albumin) shown descriptively. Values copied unchanged from the published file; the reference ranges are the laboratory's, as printed in the file. Four people only: no statistics, no prediction, no conclusions.
+- **Real data (NASA OSDR):** study OSD-575 (SpaceX Inspiration4, four crew members, serum metabolic panel: glucose, potassium, sodium, albumin) shown descriptively. Values copied unchanged from the published file; the reference ranges are the laboratory's, as printed in the file. Pooled descriptive statistics (n, mean, SD, min, quartiles, max) and a separately labelled "statistical outlier" list (outside pooled mean ± 2 SD; a statistical convention, **not** a laboratory or clinical threshold) are shown next to the lab-range flags. Four people only: no inference, no prediction, no conclusions.
 - Plain static site: no backend, no dependencies, works offline.
 
 ## Run it

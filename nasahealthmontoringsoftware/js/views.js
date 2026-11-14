@@ -127,6 +127,20 @@
     O.outsideAt(sel.analyte, 2).forEach(function (o) {
       box.appendChild(el('div', { class: 'callout', role: 'note', text: t('osdr.out', { tp: o.tp, n: o.n, total: o.total, min: o.min, max: o.max, unit: an.unit }) }));
     });
+    // pooled descriptive statistics (all crew, all time points) + statistical outliers, clearly separate from lab-range flags
+    var st = O.describe(sel.analyte), dec = an.decimals === 0 ? 1 : 2;
+    box.appendChild(el('h3', { text: t('osdr.stats.title') }));
+    var cols = [['n', st.n], ['mean', st.mean.toFixed(dec)], ['sd', st.sd.toFixed(dec)], ['min', st.min.toFixed(dec)],
+      ['q1', st.q1.toFixed(dec)], ['median', st.median.toFixed(dec)], ['q3', st.q3.toFixed(dec)], ['max', st.max.toFixed(dec)]];
+    var shead = el('tr'), srow = el('tr');
+    cols.forEach(function (c) { shead.appendChild(el('th', { scope: 'col', text: t('osdr.stats.' + c[0]) })); srow.appendChild(el('td', { text: String(c[1]) })); });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [shead]), el('tbody', null, [srow])])]));
+    var outl = O.statOutliers(sel.analyte);
+    box.appendChild(el('div', { class: 'callout', role: 'note', text: outl.length
+      ? t('osdr.stats.outliers', { lo: st.lower.toFixed(dec), hi: st.upper.toFixed(dec), unit: an.unit,
+          list: outl.map(function (r) { return r.crew + ' ' + r.tp + ' = ' + r.value.toFixed(an.decimals); }).join('; ') })
+      : t('osdr.stats.none', { lo: st.lower.toFixed(dec), hi: st.upper.toFixed(dec), unit: an.unit }) }));
+    box.appendChild(el('p', { class: 'meta', text: t('osdr.stats.note') }));
     box.appendChild(el('p', { class: 'msg', text: t('osdr.limits') }));
     box.appendChild(el('p', { class: 'meta', text: t('osdr.fileNote') }));
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
