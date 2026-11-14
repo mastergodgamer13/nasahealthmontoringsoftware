@@ -261,6 +261,93 @@
     box.appendChild(el('p', { class: 'meta' }, [t('o6.source', { files: S.sourceFiles.join(', ') }) + ' ', el('a', { href: O.DOI_URL, target: '_blank', rel: 'noopener noreferrer', text: t('o6.paper') })]));
   }
 
+
+  /* ---------- OSD-569: blood count + direct RNA-seq gene results (real data) ---------- */
+  function renderOsd569(ctx, box) {
+    var t = ctx.t, O = ctx.Osd569, Ex = ctx.Expression, S = O.STUDY;
+    box.innerHTML = '';
+    box.appendChild(el('h3', { text: t('o9.title') }));
+    box.appendChild(el('div', { class: 'badge real', text: t('o9.badge') }));
+    box.appendChild(el('p', { class: 'msg', text: S.title }));
+    box.appendChild(el('p', { class: 'hint', text: t('o9.what') }));
+    var rows = [
+      [t('o9.f.mission'), t('o9.v.mission', { m: S.mission, s: S.missionStart, e: S.missionEnd })],
+      [t('o9.f.crew'), t('o9.v.crew')],
+      [t('o9.f.tests'), t('o9.v.tests', { a: S.cbcAnalyzer })],
+      [t('o9.f.rna'), t('o9.v.rna', { n: O.NANOPORE.samples, d: S.longRead })]
+    ];
+    var tb = el('tbody');
+    rows.forEach(function (r) { tb.appendChild(el('tr', null, [el('th', { scope: 'row', text: r[0] }), el('td', { text: r[1] })])); });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [tb])]));
+
+    // complete blood count, pre-flight vs post-flight, per crew member (shared crew picker)
+    box.appendChild(el('h4', { text: t('o9.cbc.title') }));
+    box.appendChild(el('p', { class: 'msg', text: t('o9.cbc.intro') }));
+    box.appendChild(picker(ctx, O.crewIds().map(function (c) { return { id: c, label: c }; }), sel.crew,
+      function (id) { sel.crew = id; renderOsd569(ctx, box); }, t('pp.crew')));
+    var data = O.prePost(sel.crew), posts = O.TIMEPOINTS.slice(O.PRE);
+    var head = el('tr', null, [el('th', { scope: 'col', text: t('osdr.analyte') }), el('th', { scope: 'col', text: t('pp.pre') })]);
+    posts.forEach(function (tp) { head.appendChild(el('th', { scope: 'col', text: t('pp.post') + ' ' + tp })); });
+    var body = el('tbody');
+    O.ANALYTES.forEach(function (an) {
+      var d = data[an.id], dd = an.decimals + 1;
+      var first = d.preMean === null ? '—' : d.preMean.toFixed(dd);
+      var tr = el('tr', null, [el('th', { scope: 'row', text: t('o9.a.' + an.id) }),
+        el('td', null, [first, d.preN ? el('div', { class: 'meta', text: t('pp.range') + ': ' + d.preMin.toFixed(an.decimals) + '–' + d.preMax.toFixed(an.decimals) + ' (n=' + d.preN + ')' }) : null])]);
+      d.post.forEach(function (p) {
+        if (p.value === null) { tr.appendChild(el('td', { text: '—' })); return; }
+        var kids = [p.value.toFixed(an.decimals)];
+        if (p.flag) kids.push(el('span', { class: 'flag ' + p.flag, title: t('osdr.' + p.flag), text: p.flag === 'low' ? ' ▼' : ' ▲' }));
+        if (p.delta !== null) kids.push(el('div', { class: 'meta', text: (p.delta >= 0 ? '+' : '') + p.delta.toFixed(dd) }));
+        if (p.vsPre) kids.push(el('div', { class: 'meta', text: (p.vsPre === 'below' ? '↓ ' : '↑ ') + t('pp.' + p.vsPre) }));
+        tr.appendChild(el('td', null, kids));
+      });
+      body.appendChild(tr);
+    });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), body])]));
+    box.appendChild(el('p', { class: 'meta', text: '▼ ' + t('osdr.low') + ' · ▲ ' + t('osdr.high') + ' · ' + t('osdr.delta') + ' (+/−)' }));
+    box.appendChild(el('p', { class: 'msg', text: t('o9.cbc.note') }));
+    O.EXCLUDED.forEach(function (x) {
+      box.appendChild(el('p', { class: 'meta', text: t('o9.cbc.excl', { crew: x.crew, tp: x.tp, fields: x.fields.map(function (f) { return t('o9.a.' + f); }).join('; ') }) }));
+    });
+
+    // gene results: class counts per comparison (cut-offs from expression.js), then the genes that pass both
+    box.appendChild(el('h4', { text: t('o9.g.title') }));
+    box.appendChild(el('p', { class: 'msg', text: t('o9.g.intro', { n: O.COMPARISONS.length, nd: t('ge.c.nodata') }) }));
+    var D = Ex.DEFAULTS;
+    box.appendChild(el('p', { class: 'hint', text: t('ge.thresholds', { p: D.padj, l: D.log2fc, f: Ex.foldChange(D.log2fc).toFixed(2) }) }));
+    var classes = ['up', 'down', 'below', 'ns', 'nodata'];
+    var gh = el('tr', null, [el('th', { scope: 'col', text: t('o9.g.col.cmp') }), el('th', { scope: 'col', text: t('o9.g.col.genes') }), el('th', { scope: 'col', text: '' })]);
+    classes.forEach(function (c) { gh.appendChild(el('th', { scope: 'col', text: t('ge.c.' + c) })); });
+    var gb = el('tbody');
+    O.COMPARISONS.forEach(function (cmp) {
+      O.TOOLS.forEach(function (tool, k) {
+        var c = O.classCounts(cmp.id, tool), tr = el('tr', null);
+        if (k === 0) {
+          tr.appendChild(el('th', { scope: 'row', rowspan: String(O.TOOLS.length) }, [cmp.id, el('div', { class: 'meta', text: cmp.cmp })]));
+          tr.appendChild(el('td', { rowspan: String(O.TOOLS.length), text: cmp.genes.toLocaleString('en-US') }));
+        }
+        tr.appendChild(el('td', { text: t('o9.g.tool.' + tool) }));
+        classes.forEach(function (cl) { tr.appendChild(el('td', { text: c[cl].toLocaleString('en-US') })); });
+        gb.appendChild(tr);
+      });
+    });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [gh]), gb])]));
+    box.appendChild(el('p', { class: 'msg', text: t('o9.g.note') }));
+
+    var lg = O.listedGenes();
+    box.appendChild(el('p', { class: 'hint', text: t('o9.g.listed', { c: O.LISTED.comparison, t: t('o9.g.tool.' + O.LISTED.tool) }) }));
+    var lh = el('tr', null, ['o9.g.gene', 'ge.h.log2fc', 'o9.g.fc', 'ge.h.padj', 'ge.h.class'].map(function (k) { return el('th', { scope: 'col', text: t(k) }); }));
+    var lb = el('tbody');
+    lg.forEach(function (g) {
+      lb.appendChild(el('tr', null, [el('th', { scope: 'row', text: g.ensembl }), el('td', { text: (g.log2fc >= 0 ? '+' : '') + g.log2fc.toFixed(2) }),
+        el('td', { text: g.fc < 1 ? g.fc.toFixed(3) : g.fc.toFixed(2) }), el('td', { text: g.padj.toExponential(2) }), el('td', { text: t('ge.c.' + g.cls) })]));
+    });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [lh]), lb])]));
+    box.appendChild(el('p', { class: 'meta', text: t('o9.g.listedNote') }));
+    box.appendChild(el('p', { class: 'meta' }, [t('o9.source') + ' ', el('a', { href: O.DOI_URL, target: '_blank', rel: 'noopener noreferrer', text: t('o9.paper') })]));
+  }
+
   /* ---------- Real data (OSDR) ---------- */
   function renderOsdr(ctx, box) {
     var t = ctx.t, O = ctx.Osdr;
@@ -318,10 +405,13 @@
     var o6 = el('div', { class: 'osd635' });
     box.appendChild(o6);
     renderOsd635(ctx, o6);
+    var o9 = el('div', { class: 'osd569' });
+    box.appendChild(o9);
+    renderOsd569(ctx, o9);
     box.appendChild(el('p', { class: 'msg', text: t('osdr.limits') }));
     box.appendChild(el('p', { class: 'meta', text: t('osdr.fileNote') }));
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
   }
 
-  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight, renderOsd635: renderOsd635 };
+  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight, renderOsd635: renderOsd635, renderOsd569: renderOsd569 };
 })(typeof window !== 'undefined' ? window : globalThis);
