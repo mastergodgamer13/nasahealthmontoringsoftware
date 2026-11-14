@@ -117,4 +117,16 @@ test('assess on empty data: every indicator nodata, overall nodata', function ()
   assert.strictEqual(a.counts.nodata, a.total);
 });
 
+
+test('reference zones: one reading is enough, green / yellow / red', function () {
+  assert.strictEqual(Core.rangeStatus('hr', 70), 'ok'); assert.strictEqual(Core.rangeStatus('hr', 110), 'watch');
+  assert.strictEqual(Core.rangeStatus('hr', 150), 'attention'); assert.strictEqual(Core.rangeStatus('hr', 30), 'attention');
+  assert.strictEqual(Core.rangeStatus('temp', 39), 'attention'); assert.strictEqual(Core.rangeStatus('mood', 2), 'watch');
+  Core.INDICATORS.forEach(function (i) { assert.ok(Core.REFERENCE[i.id], i.id); });
+  var a = Core.assess([{ date: '2026-01-01', hr: 130, sys: 120 }]);
+  assert.strictEqual(a.per.hr.status, 'attention'); assert.strictEqual(a.per.hr.baselineStatus, 'nodata');
+  assert.strictEqual(a.per.sys.status, 'ok'); assert.strictEqual(a.overall, 'attention');
+  assert.strictEqual(a.per.glucose.status, 'nodata');
+});
+
 console.log('\n' + passed + ' tests passed' + (process.exitCode ? ', some FAILED' : ''));
