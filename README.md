@@ -16,6 +16,7 @@ Prototype for the **NASA Space Apps Challenge 2026** challenge *"Software for As
 - **Pre-flight vs post-flight (dashboard):** for each of the four OSD-575 crew members, post-flight values (R+1, R+45, R+82, R+194) are shown next to that person's own pre-flight values (L-92, L-44, L-3): pre-flight mean and range, change from the mean, and whether a value is outside the person's own pre-flight range or the laboratory range. Descriptive only, no status labels, no statistics.
 - **Pre-/post-flight input (dashboard, under the daily check-in):** for the selected user, type laboratory values (glucose, potassium, sodium, albumin) for one of the dataset's time points (L-92, L-44, L-3 = pre-flight; R+1, R+45, R+82, R+194 = post-flight). Dataset rules: one record per time point, values rounded to the dataset's decimals, lab range as printed in the dataset (used only for ▼/▲ flags, never to reject a value). A table shows the pre-flight mean, change of each post-flight value from it, and whether it is outside the person's own pre-flight range. Stored only in this browser; descriptive, not a diagnosis.
 - **Real data (NASA OSDR):** study OSD-575 (SpaceX Inspiration4, four crew members, serum metabolic panel: glucose, potassium, sodium, albumin) shown descriptively. Values copied unchanged from the published file; the reference ranges are the laboratory's, as printed in the file. The tab also shows, per crew member, post-flight values against that person's own pre-flight values (same table as the dashboard section). Four people only: no statistics, no prediction, no conclusions.
+- **Real data (NASA OSDR) — OSD-635, study information only:** design and samples of the vascular smooth muscle cell RNA-seq study (3 Space Flight + 3 Ground Control, ISS SpaceX-17), copied from the study's metadata files. **No gene-level results yet**: log2 fold change and adjusted p-values are in `GLDS-608_rna_seq_differential_expression_GLbulkRNAseq.csv`, which has not been added.
 - Plain static site: no backend, no dependencies, works offline.
 
 ## Live site
@@ -36,7 +37,8 @@ python3 -m http.server 8000   # then open http://localhost:8000
 node tests/core.test.js       # no dependencies
 node tests/i18n.test.js       # translation completeness
 node tests/store.test.js      # users and entries
-node tests/osdr.test.js       # real-data module
+node tests/osdr.test.js       # real-data module (OSD-575)
+node tests/osd635.test.js     # OSD-635 study information
 ```
 
 Covers baseline/deviation logic, edge cases (too few readings, zero variance, missing values), input validation and the simulated scenario.
@@ -86,6 +88,7 @@ js/i18n.js          UI texts: English (source), Türkçe, Italiano, Español
 js/content.js       region -> indicator / hazard structure
 js/store.js         users and their entries (tested)
 js/osdr.js          OSD-575 real data + descriptive helpers (tested)
+js/osd635.js        OSD-635 study information and sample design (tested)
 js/charts.js        multi-series SVG chart
 js/views.js         compare-users and real-data views
 js/app.js           UI wiring
