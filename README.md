@@ -116,3 +116,7 @@ tests/osdr.test.js  unit tests (real data)
 ## Immune indicator
 
 The Immune system region now has a status chip. It uses the user's own white blood cell, neutrophil and lymphocyte values (immune form): baseline = the three pre-flight values (L-92, L-44, L-3), recent = the latest up to 3 post-flight values, z = (recent mean − baseline mean) / baseline SD, with the same cut-offs as the other indicators (|z| ≥ 2 watch, |z| ≥ 3 attention). With fewer than 3 pre-flight values, no post-flight value or no variation it stays "no data" (never "usual"). With only three baseline values the estimate is rough, and this is a statistical deviation, not a clinical threshold or a diagnosis. Demo mode has no immune data. Code: `Immune.assess` in `js/immune.js`.
+
+## Status from a single check-in (green / yellow / red)
+
+A status no longer needs a week of data. Each indicator's latest value is placed in a reference zone (`Core.REFERENCE`, `Immune.REFERENCE`): green = normal, yellow = take caution, red = needs attention now. The final status is the worse of that zone and the existing deviation from the person's own baseline (which still needs 7 check-ins, or 3 pre-flight lab values). The reference values are prototype values (general adult resting guidance) and must be reviewed by a flight surgeon; they are not a diagnosis. The values and the zone rule are shown under each indicator.

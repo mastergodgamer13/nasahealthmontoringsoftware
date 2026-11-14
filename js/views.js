@@ -158,7 +158,7 @@
     if (genesWaiting) { genesWaiting.push({ ok: ok, fail: fail }); return; }
     genesWaiting = [{ ok: ok, fail: fail }];
     var sc = document.createElement('script');
-    sc.src = 'js/osd635-genes.js?v=20261114e';
+    sc.src = 'js/osd635-genes.js?v=20261114f';
     sc.onload = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.ok(); }); };
     sc.onerror = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.fail(); }); };
     document.head.appendChild(sc);
@@ -433,8 +433,9 @@
           var res = assess.per[a], an = I.ANALYTES[a], wrap = el('div', { class: 'ind' });
           wrap.appendChild(el('div', { class: 'ind-head' }, [el('div', null, [el('strong', { text: t('o9.a.' + a) }), ' ', ctx.chip(res.status)])]));
           wrap.appendChild(el('p', { class: 'msg', text: t('msg.' + res.status) }));
-          var meta = res.status === 'nodata' ? t('reason.' + res.reasonCode, res.reasonParams)
-            : t('im.stat.meta', { mean: res.baseline.mean.toFixed(an.decimals + 1), sd: res.baseline.sd.toFixed(an.decimals + 1), n: res.baseline.n, rn: res.recentN, rmean: res.recentMean.toFixed(an.decimals + 1), unit: an.unit, z: res.z.toFixed(1) });
+          var rf = I.REFERENCE[a], meta = t('ref.line', { oklo: rf.ok[0], okhi: rf.ok[1], wlo: rf.watch[0], whi: rf.watch[1], unit: an.unit }) + ' ' +
+            (res.baselineStatus === 'nodata' ? t('reason.' + res.reasonCode, res.reasonParams)
+            : t('im.stat.meta', { mean: res.baseline.mean.toFixed(an.decimals + 1), sd: res.baseline.sd.toFixed(an.decimals + 1), n: res.baseline.n, rn: res.recentN, rmean: res.recentMean.toFixed(an.decimals + 1), unit: an.unit, z: res.z.toFixed(1) }));
           wrap.appendChild(el('div', { class: 'meta', text: meta }));
           box.appendChild(wrap);
         });

@@ -2,8 +2,8 @@
  * core.js — pure logic (no DOM). Works in the browser (window.Core) and Node (require).
  *
  * IMPORTANT SCIENTIFIC NOTE
- * The status levels computed here are STATISTICAL DEVIATIONS from a person's OWN baseline.
- * They are NOT clinical thresholds and NOT diagnoses. The z-score cut-offs below are
+ * Status = worst of (a) the zone of the latest value in prototype reference ranges and (b) statistical deviation from
+ * the person's OWN baseline. Neither is a diagnosis; reference ranges still need flight-surgeon review. The z-score cut-offs below are
  * configurable statistical conventions chosen for the prototype, not medical reference values.
  * The "input sanity limits" (min/max) only reject physically implausible typing errors.
  */
@@ -29,6 +29,34 @@
     { id: 'sleep',   label: 'Sleep duration',       unit: 'h',     min: 0,   max: 24,  step: 0.1, region: 'mind' },
     { id: 'mood',    label: 'Mood (self-rating 1–5)', unit: 'pts', min: 1,   max: 5,   step: 1,   region: 'mind', integer: true }
   ];
+
+
+  /*
+   * Reference ranges (PROTOTYPE values, general adult resting guidance, NOT mission-specific and NOT a diagnosis;
+   * to be confirmed by a flight surgeon). ok = green zone, watch = yellow zone (outside ok but inside watch),
+   * anything beyond the watch zone = attention (red). One reading is enough to place a value in a zone.
+   */
+  var REFERENCE = {
+    hr:      { ok: [50, 100],   watch: [40, 120] },
+    sys:     { ok: [90, 129],   watch: [80, 159] },
+    dia:     { ok: [60, 84],    watch: [50, 99] },
+    glucose: { ok: [70, 140],   watch: [55, 199] },
+    temp:    { ok: [36.1, 37.5], watch: [35.0, 38.4] },
+    sleep:   { ok: [6, 9.5],    watch: [4, 11] },
+    mood:    { ok: [3, 5],      watch: [2, 5] }
+  };
+
+  /** Zone of one value against a {ok:[lo,hi], watch:[lo,hi]} reference: 'ok' | 'watch' | 'attention'. */
+  function zoneOf(ref, v) {
+    if (v >= ref.ok[0] && v <= ref.ok[1]) return 'ok';
+    if (v >= ref.watch[0] && v <= ref.watch[1]) return 'watch';
+    return 'attention';
+  }
+
+  function rangeStatus(id, v) {
+    var r = REFERENCE[id];
+    return r && isNum(v) ? zoneOf(r, v) : 'nodata';
+  }
 
   function isNum(x) { return typeof x === 'number' && isFinite(x); }
 
@@ -146,6 +174,10 @@
       var series = seriesFor(entries, ind.id);
       var res = computeStatus(series.map(function (p) { return p.value; }), cfg);
       res.series = series;
+      // final status = worst of (reference zone of the latest value, deviation from own baseline); one reading is enough
+      res.baselineStatus = res.status;
+      res.rangeStatus = series.length ? rangeStatus(ind.id, series[series.length - 1].value) : 'nodata';
+      res.status = worstStatus([res.baselineStatus, res.rangeStatus]);
       per[ind.id] = res;
     });
     var all = INDICATORS.map(function (i) { return per[i.id].status; });
@@ -155,7 +187,7 @@
   }
 
   var api = {
-    DEFAULTS: DEFAULTS, INDICATORS: INDICATORS, STATUS_ORDER: STATUS_ORDER,
+    DEFAULTS: DEFAULTS, REFERENCE: REFERENCE, zoneOf: zoneOf, rangeStatus: rangeStatus, INDICATORS: INDICATORS, STATUS_ORDER: STATUS_ORDER,
     mean: mean, sd: sd, getIndicator: getIndicator, validateEntry: validateEntry,
     seriesFor: seriesFor, computeStatus: computeStatus, worstStatus: worstStatus, assess: assess
   };

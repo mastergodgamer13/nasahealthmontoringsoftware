@@ -72,6 +72,12 @@
 
 
   var MIN_PRE = 3;
+  // prototype reference zones (ok = green = the dataset lab range; watch = yellow; beyond = red). Not a diagnosis.
+  var REFERENCE = {
+    wbc:   { ok: [3.8, 10.8],   watch: [3.0, 15.0] },
+    neut:  { ok: [1500, 7800],  watch: [1000, 12000] },
+    lymph: { ok: [850, 3900],   watch: [600, 5000] }
+  };
 
   /**
    * Status of each immune indicator, same statistical convention as the other indicators (core.js):
@@ -88,6 +94,9 @@
       var pts = sum.analytes[a].points, pre = [], post = [];
       pts.forEach(function (p) { if (p.value === null) return; (p.group === 'pre' ? pre : post).push(p.value); });
       var base = { preN: pre.length, postN: post.length };
+      var all = pre.concat(post), latest = all.length ? all[all.length - 1] : null;
+      var rs = latest === null ? 'nodata' : Core.zoneOf(REFERENCE[a], latest);
+      base.latest = latest; base.rangeStatus = rs;
       if (pre.length < MIN_PRE) { per[a] = Object.assign(base, { status: 'nodata', reasonCode: 'immunePre', reasonParams: { have: pre.length, need: MIN_PRE } }); return; }
       if (!post.length) { per[a] = Object.assign(base, { status: 'nodata', reasonCode: 'immunePost', reasonParams: {} }); return; }
       var mu = Core.mean(pre), sd = Core.sd(pre);
@@ -98,8 +107,12 @@
         z: z, baseline: { mean: mu, sd: sd, n: pre.length }, recentMean: rm, recentN: recent.length
       });
     });
+    Object.keys(per).forEach(function (a) {
+      per[a].baselineStatus = per[a].status;
+      per[a].status = Core.worstStatus([per[a].baselineStatus, per[a].rangeStatus]);
+    });
     return { per: per };
   }
-  var api = { MIN_PRE: MIN_PRE, assess: assess, TIMEPOINTS: TIMEPOINTS, PRE: PRE, ANALYTES: ANALYTES, LIMITS: LIMITS, flag: flag, validate: validate, summary: summary };
+  var api = { REFERENCE: REFERENCE, MIN_PRE: MIN_PRE, assess: assess, TIMEPOINTS: TIMEPOINTS, PRE: PRE, ANALYTES: ANALYTES, LIMITS: LIMITS, flag: flag, validate: validate, summary: summary };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Immune = api;
 })(typeof window !== 'undefined' ? window : globalThis);
