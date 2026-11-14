@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
 
-  var sel = { cmpInd: 'hr', analyte: 'glucose', crew: 'C001', cbc: 'wbc', tool: 'pipeline-transcriptome-de' };
+  var sel = { cmpInd: 'hr', analyte: 'glucose', crew: 'C001', cbc: 'wbc', rr: 'wbc', tool: 'pipeline-transcriptome-de' };
 
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
@@ -158,7 +158,7 @@
     if (genesWaiting) { genesWaiting.push({ ok: ok, fail: fail }); return; }
     genesWaiting = [{ ok: ok, fail: fail }];
     var sc = document.createElement('script');
-    sc.src = 'js/osd635-genes.js?v=20261114b';
+    sc.src = 'js/osd635-genes.js?v=20261114c';
     sc.onload = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.ok(); }); };
     sc.onerror = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.fail(); }); };
     document.head.appendChild(sc);
@@ -273,6 +273,57 @@
   }
 
 
+  /* CBC line chart for one analyte (all crew), shared by the OSD-569 section and the immune-system region */
+  function cbcChart(ctx, box, id) {
+    var t = ctx.t, O = ctx.Osd569;
+    // chart: one CBC analyte over time, one line per crew member, laboratory range(s) as shaded band(s)
+    var can = O.analyte(id), crewList = O.crewIds(), rg = {}, bands = [];
+    crewList.forEach(function (c) {
+      var k = O.CREW[c][id];
+      k.values.forEach(function (v, i) { if (k.lo[i] !== null && k.hi[i] !== null && !rg[k.lo[i] + '–' + k.hi[i]]) { rg[k.lo[i] + '–' + k.hi[i]] = 1; bands.push({ lo: k.lo[i], hi: k.hi[i] }); } });
+    });
+    box.appendChild(el('p', { class: 'hint', text: t('o9.cbc.range', { r: Object.keys(rg).join('; '), unit: can.unit }) }));
+    var clabel = t('o9.a.' + id);
+    box.appendChild(Charts.multiChart({
+      series: crewList.map(function (c) {
+        var k = O.CREW[c][id], pts = [];
+        k.values.forEach(function (v, i) { if (v !== null) pts.push({ x: i, y: v, title: O.TIMEPOINTS[i] + ' (' + c + '): ' + v.toFixed(can.decimals) + ' ' + can.unit }); });
+        return { name: c, points: pts };
+      }),
+      xMin: 0, xMax: O.TIMEPOINTS.length - 1, bands: bands, unit: can.unit, decimals: can.decimals,
+      xTicks: O.TIMEPOINTS.map(function (tp, i) { return { x: i, text: tp }; }),
+      marks: [{ x: O.PRE - 0.5, text: t('osdr.flight') }],
+      aria: t('o9.cbc.chartAria', { label: clabel })
+    }));
+    box.appendChild(Charts.legend(crewList));
+  }
+
+  /* pre-flight vs post-flight CBC table for one crew member; ids = analyte ids or null for all */
+  function cbcTable(ctx, box, crew, ids) {
+    var t = ctx.t, O = ctx.Osd569;
+    var list = O.ANALYTES.filter(function (a) { return !ids || ids.indexOf(a.id) >= 0; });
+    var data = O.prePost(crew), posts = O.TIMEPOINTS.slice(O.PRE);
+    var head = el('tr', null, [el('th', { scope: 'col', text: t('osdr.analyte') }), el('th', { scope: 'col', text: t('pp.pre') })]);
+    posts.forEach(function (tp) { head.appendChild(el('th', { scope: 'col', text: t('pp.post') + ' ' + tp })); });
+    var body = el('tbody');
+    list.forEach(function (an) {
+      var d = data[an.id], dd = an.decimals + 1;
+      var first = d.preMean === null ? '—' : d.preMean.toFixed(dd);
+      var tr = el('tr', null, [el('th', { scope: 'row', text: t('o9.a.' + an.id) }),
+        el('td', null, [first, d.preN ? el('div', { class: 'meta', text: t('pp.range') + ': ' + d.preMin.toFixed(an.decimals) + '–' + d.preMax.toFixed(an.decimals) + ' (n=' + d.preN + ')' }) : null])]);
+      d.post.forEach(function (p) {
+        if (p.value === null) { tr.appendChild(el('td', { text: '—' })); return; }
+        var kids = [p.value.toFixed(an.decimals)];
+        if (p.flag) kids.push(el('span', { class: 'flag ' + p.flag, title: t('osdr.' + p.flag), text: p.flag === 'low' ? ' ▼' : ' ▲' }));
+        if (p.delta !== null) kids.push(el('div', { class: 'meta', text: (p.delta >= 0 ? '+' : '') + p.delta.toFixed(dd) }));
+        if (p.vsPre) kids.push(el('div', { class: 'meta', text: (p.vsPre === 'below' ? '↓ ' : '↑ ') + t('pp.' + p.vsPre) }));
+        tr.appendChild(el('td', null, kids));
+      });
+      body.appendChild(tr);
+    });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), body])]));
+  }
+
   /* ---------- OSD-569: blood count + direct RNA-seq gene results (real data) ---------- */
   function renderOsd569(ctx, box) {
     var t = ctx.t, O = ctx.Osd569, Ex = ctx.Expression, S = O.STUDY;
@@ -294,50 +345,12 @@
     // complete blood count, pre-flight vs post-flight, per crew member (shared crew picker)
     box.appendChild(el('h4', { text: t('o9.cbc.title') }));
     box.appendChild(el('p', { class: 'msg', text: t('o9.cbc.intro') }));
-    // chart: one CBC analyte over time, one line per crew member, laboratory range(s) as shaded band(s)
     box.appendChild(picker(ctx, O.ANALYTES.map(function (a) { return { id: a.id, label: t('o9.a.' + a.id) }; }), sel.cbc,
       function (id) { sel.cbc = id; renderOsd569(ctx, box); }, t('osdr.analyte')));
-    var can = O.analyte(sel.cbc), crewList = O.crewIds(), rg = {}, bands = [];
-    crewList.forEach(function (c) {
-      var k = O.CREW[c][sel.cbc];
-      k.values.forEach(function (v, i) { if (k.lo[i] !== null && k.hi[i] !== null && !rg[k.lo[i] + '–' + k.hi[i]]) { rg[k.lo[i] + '–' + k.hi[i]] = 1; bands.push({ lo: k.lo[i], hi: k.hi[i] }); } });
-    });
-    box.appendChild(el('p', { class: 'hint', text: t('o9.cbc.range', { r: Object.keys(rg).join('; '), unit: can.unit }) }));
-    var clabel = t('o9.a.' + sel.cbc);
-    box.appendChild(Charts.multiChart({
-      series: crewList.map(function (c) {
-        var k = O.CREW[c][sel.cbc], pts = [];
-        k.values.forEach(function (v, i) { if (v !== null) pts.push({ x: i, y: v, title: O.TIMEPOINTS[i] + ' (' + c + '): ' + v.toFixed(can.decimals) + ' ' + can.unit }); });
-        return { name: c, points: pts };
-      }),
-      xMin: 0, xMax: O.TIMEPOINTS.length - 1, bands: bands, unit: can.unit, decimals: can.decimals,
-      xTicks: O.TIMEPOINTS.map(function (tp, i) { return { x: i, text: tp }; }),
-      marks: [{ x: O.PRE - 0.5, text: t('osdr.flight') }],
-      aria: t('o9.cbc.chartAria', { label: clabel })
-    }));
-    box.appendChild(Charts.legend(crewList));
+    cbcChart(ctx, box, sel.cbc);
     box.appendChild(picker(ctx, O.crewIds().map(function (c) { return { id: c, label: c }; }), sel.crew,
       function (id) { sel.crew = id; renderOsd569(ctx, box); }, t('pp.crew')));
-    var data = O.prePost(sel.crew), posts = O.TIMEPOINTS.slice(O.PRE);
-    var head = el('tr', null, [el('th', { scope: 'col', text: t('osdr.analyte') }), el('th', { scope: 'col', text: t('pp.pre') })]);
-    posts.forEach(function (tp) { head.appendChild(el('th', { scope: 'col', text: t('pp.post') + ' ' + tp })); });
-    var body = el('tbody');
-    O.ANALYTES.forEach(function (an) {
-      var d = data[an.id], dd = an.decimals + 1;
-      var first = d.preMean === null ? '—' : d.preMean.toFixed(dd);
-      var tr = el('tr', null, [el('th', { scope: 'row', text: t('o9.a.' + an.id) }),
-        el('td', null, [first, d.preN ? el('div', { class: 'meta', text: t('pp.range') + ': ' + d.preMin.toFixed(an.decimals) + '–' + d.preMax.toFixed(an.decimals) + ' (n=' + d.preN + ')' }) : null])]);
-      d.post.forEach(function (p) {
-        if (p.value === null) { tr.appendChild(el('td', { text: '—' })); return; }
-        var kids = [p.value.toFixed(an.decimals)];
-        if (p.flag) kids.push(el('span', { class: 'flag ' + p.flag, title: t('osdr.' + p.flag), text: p.flag === 'low' ? ' ▼' : ' ▲' }));
-        if (p.delta !== null) kids.push(el('div', { class: 'meta', text: (p.delta >= 0 ? '+' : '') + p.delta.toFixed(dd) }));
-        if (p.vsPre) kids.push(el('div', { class: 'meta', text: (p.vsPre === 'below' ? '↓ ' : '↑ ') + t('pp.' + p.vsPre) }));
-        tr.appendChild(el('td', null, kids));
-      });
-      body.appendChild(tr);
-    });
-    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), body])]));
+    cbcTable(ctx, box, sel.crew, null);
     box.appendChild(el('p', { class: 'meta', text: '▼ ' + t('osdr.low') + ' · ▲ ' + t('osdr.high') + ' · ' + t('osdr.delta') + ' (+/−)' }));
     box.appendChild(el('p', { class: 'msg', text: t('o9.cbc.note') }));
     O.EXCLUDED.forEach(function (x) {
@@ -386,6 +399,25 @@
     box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [lh]), lb])]));
     box.appendChild(el('p', { class: 'meta', text: t('o9.g.listedNote') }));
     box.appendChild(el('p', { class: 'meta' }, [t('o9.source') + ' ', el('a', { href: O.DOI_URL, target: '_blank', rel: 'noopener noreferrer', text: t('o9.paper') })]));
+  }
+
+
+  /* ---------- Body-map region: real crew reference data (not the user's own data) ---------- */
+  function renderRegionRef(ctx, box, ids) {
+    var t = ctx.t, O = ctx.Osd569;
+    box.innerHTML = '';
+    box.appendChild(el('h4', { text: t('rr.title') }));
+    box.appendChild(el('div', { class: 'badge real', text: t('rr.badge') }));
+    box.appendChild(el('p', { class: 'msg', text: t('rr.intro') }));
+    box.appendChild(picker(ctx, ids.map(function (a) { return { id: a, label: t('o9.a.' + a) }; }), ids.indexOf(sel.rr) >= 0 ? sel.rr : ids[0],
+      function (id) { sel.rr = id; renderRegionRef(ctx, box, ids); }, t('osdr.analyte')));
+    cbcChart(ctx, box, ids.indexOf(sel.rr) >= 0 ? sel.rr : ids[0]);
+    box.appendChild(picker(ctx, O.crewIds().map(function (c) { return { id: c, label: c }; }), sel.crew,
+      function (id) { sel.crew = id; renderRegionRef(ctx, box, ids); }, t('pp.crew')));
+    cbcTable(ctx, box, sel.crew, ids);
+    box.appendChild(el('p', { class: 'meta', text: '▼ ' + t('osdr.low') + ' · ▲ ' + t('osdr.high') + ' · ' + t('osdr.delta') + ' (+/−)' }));
+    box.appendChild(el('p', { class: 'msg', text: t('o9.cbc.note') }));
+    box.appendChild(el('p', { class: 'meta' }, [t('rr.source') + ' ', el('a', { href: O.DOI_URL, target: '_blank', rel: 'noopener noreferrer', text: t('o9.paper') })]));
   }
 
   /* ---------- Real data (OSDR) ---------- */
@@ -453,5 +485,5 @@
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
   }
 
-  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight, renderOsd635: renderOsd635, renderOsd569: renderOsd569 };
+  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight, renderOsd635: renderOsd635, renderOsd569: renderOsd569, renderRegionRef: renderRegionRef };
 })(typeof window !== 'undefined' ? window : globalThis);

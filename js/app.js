@@ -141,6 +141,8 @@
     box.appendChild(el('div', { class: 'tags' }, def.hazards.map(function (h) { return el('span', { text: t('hazard.' + h) }); })));
     box.appendChild(el('div', { class: 'meta' }, [t('hazardNote') + ' ', el('span', { class: 'draft', text: t('draft') })]));
 
+    if (def.osdr) { var rr = el('div', { class: 'osd569 region-ref' }); box.appendChild(rr); Views.renderRegionRef(ctx(), rr, def.osdr); }
+
     def.indicators.forEach(function (id) {
       var ind = Core.getIndicator(id), res = assessment.per[id];
       var wrap = el('div', { class: 'ind' });
