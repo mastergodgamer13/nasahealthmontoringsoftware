@@ -18,6 +18,10 @@ Prototype for the **NASA Space Apps Challenge 2026** challenge *"Software for As
 - **Real data (NASA OSDR):** study OSD-575 (SpaceX Inspiration4, four crew members, serum metabolic panel: glucose, potassium, sodium, albumin) shown descriptively. Values copied unchanged from the published file; the reference ranges are the laboratory's, as printed in the file. Four people only: no statistics, no prediction, no conclusions.
 - Plain static site: no backend, no dependencies, works offline.
 
+## Live site
+
+https://mastergodgamer13.github.io/selfassesmentcheck/ (GitHub Pages, from the repository root; needs the repository to be named `selfassesmentcheck`).
+
 ## Run it
 
 Open `index.html` in a browser, or serve the folder:
