@@ -28,4 +28,29 @@ test('glucose: three crew members outside the range at R+45', () => {
   const o = O.outsideAt('glucose', 2).filter(x => x.tp === 'R+45')[0];
   assert.ok(o); assert.strictEqual(o.n, 3); assert.strictEqual(o.min, 36); assert.strictEqual(o.max, 44);
 });
+test('prePost: pre = first 3 time points, post = the other 4, per crew member', () => {
+  const d = O.prePost('C001').glucose; // pre 83, 80, 69; post 90, 84, 91, 87
+  assert.ok(Math.abs(d.preMean - 77.3333) < 0.001);
+  assert.strictEqual(d.preMin, 69); assert.strictEqual(d.preMax, 83);
+  assert.deepStrictEqual(d.post.map(p => p.tp), ['R+1', 'R+45', 'R+82', 'R+194']);
+  assert.deepStrictEqual(d.post.map(p => p.value), [90, 84, 91, 87]);
+  assert.ok(d.post.every(p => p.vsPre === 'above'));
+});
+test('prePost: below own pre-flight range and lab-range flag are independent', () => {
+  const p = O.prePost('C003').glucose.post[1]; // C003 R+45 = 36; pre 77, 62, 75
+  assert.strictEqual(p.tp, 'R+45'); assert.strictEqual(p.vsPre, 'below'); assert.strictEqual(p.flag, 'low');
+  const q = O.prePost('C004').glucose.post[0]; // R+1 = 97, pre 100, 83, 56 -> inside own range, inside lab range
+  assert.strictEqual(q.vsPre, null); assert.strictEqual(q.flag, null);
+});
+test('prePost covers every analyte and matches summary()', () => {
+  O.crewIds().forEach(c => {
+    const d = O.prePost(c);
+    assert.deepStrictEqual(Object.keys(d), Object.keys(O.ANALYTES));
+    Object.keys(O.ANALYTES).forEach(a => {
+      const s = O.summary(c, a);
+      assert.strictEqual(d[a].preMean, s.preMean);
+      d[a].post.forEach((p, i) => assert.strictEqual(p.delta, s.points[O.PRE + i].delta));
+    });
+  });
+});
 console.log(n + ' osdr tests passed');

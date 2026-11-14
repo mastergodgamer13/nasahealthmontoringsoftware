@@ -1,8 +1,8 @@
-/* views.js — "Compare users" and "Real data (OSDR)" views. Browser only. All logic is in core.js / osdr.js. */
+/* views.js — "Pre/post-flight" (dashboard), "Compare users" and "Real data (OSDR)" views. Browser only. All logic is in core.js / osdr.js. */
 (function (root) {
   'use strict';
 
-  var sel = { cmpInd: 'hr', analyte: 'glucose' };
+  var sel = { cmpInd: 'hr', analyte: 'glucose', crew: 'C001' };
 
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
@@ -76,6 +76,42 @@
     box.appendChild(Charts.legend(users.map(function (u) { return u.name; })));
   }
 
+  /* ---------- Dashboard: pre-flight vs post-flight (real OSDR data, descriptive) ---------- */
+  function renderPrePost(ctx, box) {
+    var t = ctx.t, O = ctx.Osdr;
+    box.innerHTML = '';
+    box.appendChild(el('h2', { text: t('pp.title') }));
+    box.appendChild(el('div', { class: 'badge real', text: t('osdr.badge') }));
+    box.appendChild(el('p', { class: 'msg', text: t('pp.intro') }));
+    box.appendChild(picker(ctx, O.crewIds().map(function (c) { return { id: c, label: c }; }), sel.crew,
+      function (id) { sel.crew = id; renderPrePost(ctx, box); }, t('pp.crew')));
+
+    var data = O.prePost(sel.crew);
+    var posts = O.TIMEPOINTS.slice(O.PRE);
+    var head = el('tr', null, [el('th', { scope: 'col', text: t('osdr.analyte') }), el('th', { scope: 'col', text: t('pp.pre') })]);
+    posts.forEach(function (tp) { head.appendChild(el('th', { scope: 'col', text: t('pp.post') + ' ' + tp })); });
+    var tbody = el('tbody');
+    Object.keys(O.ANALYTES).forEach(function (a) {
+      var an = O.ANALYTES[a], d = data[a], dd = an.decimals === 0 ? 1 : 2;
+      var tr = el('tr', null, [
+        el('th', { scope: 'row', text: t('osdr.a.' + a) + ' (' + an.unit + ')' }),
+        el('td', null, [d.preMean.toFixed(dd), el('div', { class: 'meta', text: t('pp.range') + ': ' + d.preMin.toFixed(an.decimals) + '–' + d.preMax.toFixed(an.decimals) })])
+      ]);
+      d.post.forEach(function (p) {
+        var kids = [p.value.toFixed(an.decimals)];
+        if (p.flag) kids.push(el('span', { class: 'flag ' + p.flag, title: t('osdr.' + p.flag), text: p.flag === 'low' ? ' ▼' : ' ▲' }));
+        kids.push(el('div', { class: 'meta', text: (p.delta >= 0 ? '+' : '') + p.delta.toFixed(dd) }));
+        if (p.vsPre) kids.push(el('div', { class: 'meta', text: (p.vsPre === 'below' ? '↓ ' : '↑ ') + t('pp.' + p.vsPre) }));
+        tr.appendChild(el('td', null, kids));
+      });
+      tbody.appendChild(tr);
+    });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), tbody])]));
+    box.appendChild(el('p', { class: 'meta', text: '▼ ' + t('osdr.low') + ' · ▲ ' + t('osdr.high') + ' · ' + t('osdr.delta') + ' (+/−)' }));
+    box.appendChild(el('p', { class: 'msg', text: t('pp.note') }));
+    box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
+  }
+
   /* ---------- Real data (OSDR) ---------- */
   function renderOsdr(ctx, box) {
     var t = ctx.t, O = ctx.Osdr;
@@ -132,5 +168,5 @@
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
   }
 
-  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr };
+  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost };
 })(typeof window !== 'undefined' ? window : globalThis);
