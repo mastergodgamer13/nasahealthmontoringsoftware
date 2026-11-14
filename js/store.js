@@ -1,7 +1,8 @@
 /*
  * store.js — users and their entries (no DOM). Works in the browser (window.Store) and Node.
  *
- * Data model: { users: [{ id, name, entries: [ {date, hr, sys, ...} ] }], current: id|null }
+ * Data model: { users: [{ id, name, entries: [ {date, hr, sys, ...} ], flight: [ {tp, glucose, ...} ] }], current: id|null }
+ * flight = typed-in pre-/post-flight records, one per time point (rules live in osdr.js).
  * Everything stays in the browser (localStorage); nothing is sent anywhere.
  */
 (function (root) {
@@ -24,11 +25,17 @@
       for (var i = 0; i < state.users.length; i++) if (state.users[i].id === id) return state.users[i];
       return null;
     }
+    function cleanFlight(r) {
+      var o = { tp: r.tp };
+      Object.keys(r).forEach(function (k) { if (k !== 'tp' && typeof r[k] === 'number' && isFinite(r[k])) o[k] = r[k]; });
+      return o;
+    }
     function cleanUser(u) {
       return {
         id: String(u.id),
         name: String(u.name).slice(0, NAME_MAX),
-        entries: Array.isArray(u.entries) ? u.entries.filter(function (e) { return e && typeof e.date === 'string'; }) : []
+        entries: Array.isArray(u.entries) ? u.entries.filter(function (e) { return e && typeof e.date === 'string'; }) : [],
+        flight: Array.isArray(u.flight) ? u.flight.filter(function (r) { return r && typeof r.tp === 'string'; }).map(cleanFlight) : []
       };
     }
     function nextId() {
@@ -84,7 +91,7 @@
       add: function (name) {
         var v = validateName(name);
         if (!v.ok) return v;
-        var u = { id: nextId(), name: v.name, entries: [] };
+        var u = { id: nextId(), name: v.name, entries: [], flight: [] };
         state.users.push(u); state.current = u.id; persist();
         return { ok: true, user: u };
       },
@@ -100,7 +107,14 @@
         u.entries = u.entries.filter(function (e) { return e.date !== entry.date; }); // one entry per date
         u.entries.push(entry); persist(); return true;
       },
-      clearEntries: function (id) { var u = find(id); if (!u) return false; u.entries = []; persist(); return true; }
+      clearEntries: function (id) { var u = find(id); if (!u) return false; u.entries = []; persist(); return true; },
+      flightOf: function (id) { var u = find(id); return u ? u.flight : []; },
+      saveFlight: function (id, rec) {
+        var u = find(id); if (!u || !rec || typeof rec.tp !== 'string') return false;
+        u.flight = u.flight.filter(function (r) { return r.tp !== rec.tp; }); // one record per time point
+        u.flight.push(cleanFlight(rec)); persist(); return true;
+      },
+      clearFlight: function (id) { var u = find(id); if (!u) return false; u.flight = []; persist(); return true; }
     };
     load();
     return api;

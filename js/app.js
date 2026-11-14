@@ -206,10 +206,13 @@
 
   function render() {
     assessment = Core.assess(entries());
-    applyStatic(); updateFormLabels();
+    applyStatic(); updateFormLabels(); updateFlightLabels();
     renderTabs(); renderUsers();
     renderBadge(); renderOverall(); renderBody(); renderDetail();
-    if (state.tab === 'dash') Views.renderPrePost(ctx(), $('prepost'));
+    if (state.tab === 'dash') {
+      Views.renderPrePost(ctx(), $('prepost'));
+      Views.renderFlight(ctx(), $('flight-summary'), store.flightOf(store.current()));
+    }
     if (state.tab === 'compare') Views.renderCompare(ctx(), $('cmp'));
     if (state.tab === 'osdr') Views.renderOsdr(ctx(), $('osdr'));
   }
@@ -226,8 +229,8 @@
     var none = !users.length;
     sel.disabled = none; $('user-remove').disabled = none;
     $('user-none').hidden = !none;
-    Array.prototype.forEach.call($('checkin').querySelectorAll('input,button'), function (x) { x.disabled = none; });
-    $('clear-manual').disabled = none;
+    Array.prototype.forEach.call(document.querySelectorAll('#checkin input,#checkin button,#flightform input,#flightform select,#flightform button'), function (x) { x.disabled = none; });
+    $('clear-manual').disabled = none; $('clear-flight').disabled = none;
   }
 
   function userMsg(text, cls) { var m = $('user-msg'); m.className = 'form-msg ' + (cls || ''); m.textContent = text; }
@@ -272,13 +275,60 @@
     });
   }
 
+  /* ---------- pre-/post-flight form (rules: Osdr) ---------- */
+  function flightErrText(v) {
+    return v.codes.map(function (c) {
+      var an = c.id ? Osdr.ANALYTES[c.id] : null;
+      return t('fl.err.' + c.code, { label: c.id ? t('osdr.a.' + c.id) : '', min: c.min, max: c.max, unit: an ? an.unit : '' });
+    }).join(' ');
+  }
+  function buildFlightForm() {
+    var f = $('flightform'); f.innerHTML = '';
+    var selTp = el('select', { name: 'tp', required: 'required' });
+    var gPre = el('optgroup', { 'data-fl-group': 'pre' }), gPost = el('optgroup', { 'data-fl-group': 'post' });
+    Osdr.TIMEPOINTS.forEach(function (tp) { (Osdr.groupOf(tp) === 'pre' ? gPre : gPost).appendChild(el('option', { value: tp, text: tp })); });
+    selTp.appendChild(gPre); selTp.appendChild(gPost); selTp.value = Osdr.TIMEPOINTS[Osdr.PRE];
+    f.appendChild(el('label', { class: 'full' }, [el('span', { 'data-fl': 'tp' }), selTp]));
+    Object.keys(Osdr.ANALYTES).forEach(function (a) {
+      var an = Osdr.ANALYTES[a];
+      f.appendChild(el('label', null, [el('span', { 'data-fl-a': a }),
+        el('input', { type: 'number', name: a, step: an.decimals ? '0.1' : '1', min: String(Osdr.LIMITS[a].min), max: String(Osdr.LIMITS[a].max), inputmode: 'decimal' }),
+        el('small', { class: 'meta', 'data-fl-lab': a })]));
+    });
+    f.appendChild(el('button', { type: 'submit', 'data-fl': 'save' }));
+    f.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var raw = {};
+      Array.prototype.forEach.call(f.elements, function (inp) { if (inp.name) raw[inp.name] = inp.value; });
+      var v = Osdr.validateFlight(raw), msg = $('flight-msg');
+      if (!store.current()) { msg.className = 'form-msg err'; msg.textContent = t('users.needUser'); return; }
+      if (!v.ok) { msg.className = 'form-msg err'; msg.textContent = flightErrText(v); return; }
+      store.saveFlight(store.current(), v.entry); // one record per time point: replaced if it exists
+      msg.className = 'form-msg good'; msg.textContent = t('fl.saved', { tp: v.entry.tp, group: t('fl.group.' + Osdr.groupOf(v.entry.tp)) });
+      render();
+    });
+  }
+  function updateFlightLabels() {
+    var f = $('flightform');
+    Array.prototype.forEach.call(f.querySelectorAll('[data-fl-group]'), function (g) { g.setAttribute('label', t('fl.group.' + g.getAttribute('data-fl-group'))); });
+    f.querySelector('[data-fl="tp"]').textContent = t('osdr.tp');
+    f.querySelector('[data-fl="save"]').textContent = t('fl.save');
+    Array.prototype.forEach.call(f.querySelectorAll('[data-fl-a]'), function (s) {
+      var a = s.getAttribute('data-fl-a'); s.textContent = t('osdr.a.' + a) + ' (' + Osdr.ANALYTES[a].unit + ')';
+    });
+    Array.prototype.forEach.call(f.querySelectorAll('[data-fl-lab]'), function (s) {
+      var an = Osdr.ANALYTES[s.getAttribute('data-fl-lab')]; s.textContent = t('fl.lab', { lo: an.lo, hi: an.hi });
+    });
+  }
+
   function init() {
     I18n.init();
     store = Store.create(safeStorage(), { legacyName: t('users.legacyName') });
     var sel = $('lang');
     I18n.LANGS.forEach(function (l) { sel.appendChild(el('option', { value: l.code, text: l.name })); });
-    sel.addEventListener('change', function () { I18n.set(sel.value); $('form-msg').textContent = ''; render(); });
+    sel.addEventListener('change', function () { I18n.set(sel.value); $('form-msg').textContent = ''; $('flight-msg').textContent = ''; render(); });
     buildForm();
+    buildFlightForm();
     $('btn-demo').addEventListener('click', function () { state.mode = 'demo'; render(); });
     $('btn-manual').addEventListener('click', function () { state.mode = 'manual'; render(); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function (b) {
@@ -296,6 +346,11 @@
     $('user-remove').addEventListener('click', function () {
       var u = store.currentUser(); if (!u) return;
       if (window.confirm(t('users.confirmRemove', { user: u.name }))) { store.remove(u.id); userMsg(''); render(); }
+    });
+    $('clear-flight').addEventListener('click', function () {
+      var u = store.currentUser();
+      if (!u || !u.flight.length) return;
+      if (window.confirm(t('fl.confirmClear', { user: u.name }))) { store.clearFlight(u.id); $('flight-msg').textContent = ''; render(); }
     });
     $('clear-manual').addEventListener('click', function () {
       var u = store.currentUser();

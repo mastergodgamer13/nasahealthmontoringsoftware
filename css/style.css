@@ -56,11 +56,11 @@ h3 { font-size: 1rem; margin: 1rem 0 .25rem; }
 .chart { width: 100%; height: auto; margin-top: .4rem; background: #0a0f18; border-radius: 6px; }
 .chart text { fill: var(--muted); font-size: 10px; }
 
-form#checkin { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
-form#checkin label { display: grid; gap: .2rem; font-size: .82rem; color: var(--muted); }
-form#checkin label.full { grid-column: 1 / -1; }
-form#checkin input { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: .45rem .5rem; font: inherit; width: 100%; }
-form#checkin button { grid-column: 1 / -1; background: var(--accent); color: #07101f; border: 0; border-radius: 8px; padding: .6rem; font: inherit; font-weight: 700; cursor: pointer; }
+form#checkin, form#flightform { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+form#checkin label, form#flightform label { display: grid; gap: .2rem; font-size: .82rem; color: var(--muted); }
+form#checkin label.full, form#flightform label.full { grid-column: 1 / -1; }
+form#checkin input, form#flightform input, form#flightform select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: .45rem .5rem; font: inherit; width: 100%; }
+form#checkin button, form#flightform button { grid-column: 1 / -1; background: var(--accent); color: #07101f; border: 0; border-radius: 8px; padding: .6rem; font: inherit; font-weight: 700; cursor: pointer; }
 .form-msg { min-height: 1.2rem; font-size: .88rem; margin-top: .5rem; }
 .form-msg.err { color: var(--attention); }
 .form-msg.good { color: var(--ok); }

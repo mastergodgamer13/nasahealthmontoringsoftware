@@ -76,6 +76,40 @@
     box.appendChild(Charts.legend(users.map(function (u) { return u.name; })));
   }
 
+  /* ---------- Dashboard: typed-in pre-/post-flight values of the selected user ---------- */
+  function renderFlight(ctx, box, records) {
+    var t = ctx.t, O = ctx.Osdr;
+    box.innerHTML = '';
+    var sum = O.flightSummary(records);
+    if (!sum.tps.length) { box.appendChild(el('p', { class: 'empty', text: t('fl.none') })); return; }
+    var names = Object.keys(O.ANALYTES);
+    var head = el('tr', null, [el('th', { scope: 'col', text: t('osdr.tp') })]);
+    names.forEach(function (a) { head.appendChild(el('th', { scope: 'col', text: t('osdr.a.' + a) + ' (' + O.ANALYTES[a].unit + ')' })); });
+    var tbody = el('tbody');
+    sum.tps.forEach(function (tp, i) {
+      var tr = el('tr', null, [el('th', { scope: 'row' }, [tp, el('div', { class: 'meta', text: t('fl.group.' + O.groupOf(tp)) })])]);
+      names.forEach(function (a) {
+        var an = O.ANALYTES[a], dd = an.decimals === 0 ? 1 : 2, p = sum.analytes[a].points[i];
+        if (p.value === null) { tr.appendChild(el('td', { text: '—' })); return; }
+        var kids = [p.value.toFixed(an.decimals)];
+        if (p.flag) kids.push(el('span', { class: 'flag ' + p.flag, title: t('osdr.' + p.flag), text: p.flag === 'low' ? ' ▼' : ' ▲' }));
+        if (p.delta !== null) kids.push(el('div', { class: 'meta', text: (p.delta >= 0 ? '+' : '') + p.delta.toFixed(dd) }));
+        if (p.vsPre) kids.push(el('div', { class: 'meta', text: (p.vsPre === 'below' ? '↓ ' : '↑ ') + t('pp.' + p.vsPre) }));
+        tr.appendChild(el('td', null, kids));
+      });
+      tbody.appendChild(tr);
+    });
+    var pre = el('tr', { class: 'sumrow' }, [el('th', { scope: 'row', text: t('fl.preMean') })]);
+    names.forEach(function (a) {
+      var an = O.ANALYTES[a], s = sum.analytes[a];
+      pre.appendChild(el('td', null, s.preN ? [s.preMean.toFixed(an.decimals === 0 ? 1 : 2), el('div', { class: 'meta', text: t('fl.n', { n: s.preN, total: O.PRE }) })] : ['—']));
+    });
+    tbody.appendChild(pre);
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), tbody])]));
+    box.appendChild(el('p', { class: 'meta', text: '▼ ' + t('osdr.low') + ' · ▲ ' + t('osdr.high') + ' · ' + t('osdr.delta') + ' (+/−)' }));
+    box.appendChild(el('p', { class: 'meta', text: t('fl.note') }));
+  }
+
   /* ---------- Dashboard: pre-flight vs post-flight (real OSDR data, descriptive) ---------- */
   function renderPrePost(ctx, box) {
     var t = ctx.t, O = ctx.Osdr;
@@ -168,5 +202,5 @@
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
   }
 
-  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost };
+  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight };
 })(typeof window !== 'undefined' ? window : globalThis);
