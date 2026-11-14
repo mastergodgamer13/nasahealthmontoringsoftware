@@ -99,10 +99,20 @@
   /* ---------- rendering ---------- */
   var assessment = null;
 
+  // adds the immune indicators (own blood-count values, immune.js) to the core assessment; the demo has none
+  function withImmune(base) {
+    var im = Immune.assess(state.mode === 'demo' ? [] : store.immuneOf(store.current()));
+    var ids = Object.keys(im.per), all = base.counts;
+    ids.forEach(function (id) { base.per[id] = im.per[id]; all[im.per[id].status]++; });
+    var statuses = Object.keys(base.per).map(function (k) { return base.per[k].status; });
+    base.overall = Core.worstStatus(statuses); base.total += ids.length; base.immune = im;
+    return base;
+  }
+
   function regionStatus(regionId) {
-    var def = Content.REGIONS[regionId];
-    if (!def.indicators.length) return 'nodata';
-    return Core.worstStatus(def.indicators.map(function (id) { return assessment.per[id].status; }));
+    var def = Content.REGIONS[regionId], ids = def.indicators.concat(def.own || []);
+    if (!ids.length) return 'nodata';
+    return Core.worstStatus(ids.map(function (id) { return assessment.per[id].status; }));
   }
 
   function renderOverall() {
@@ -141,7 +151,7 @@
     box.appendChild(el('div', { class: 'tags' }, def.hazards.map(function (h) { return el('span', { text: t('hazard.' + h) }); })));
     box.appendChild(el('div', { class: 'meta' }, [t('hazardNote') + ' ', el('span', { class: 'draft', text: t('draft') })]));
 
-    if (def.osdr) { var own = el('div', { class: 'immune-own' }); box.appendChild(own); Views.renderImmuneOwn(ctx(), own, store.immuneOf(store.current()), true);
+    if (def.osdr) { var own = el('div', { class: 'immune-own' }); box.appendChild(own); Views.renderImmuneOwn(ctx(), own, store.immuneOf(store.current()), true, assessment.immune);
       var rr = el('div', { class: 'osd569 region-ref' }); box.appendChild(rr); Views.renderRegionRef(ctx(), rr, def.osdr); }
 
     def.indicators.forEach(function (id) {
@@ -208,7 +218,7 @@
   }
 
   function render() {
-    assessment = Core.assess(entries());
+    assessment = withImmune(Core.assess(entries()));
     applyStatic(); updateFormLabels(); updateFlightLabels(); updateImmuneLabels();
     renderTabs(); renderUsers();
     renderBadge(); renderOverall(); renderBody(); renderDetail();

@@ -60,4 +60,33 @@ test('store: users saved before this feature (no immune field) still load', () =
   const st = mem(); st.setItem('sa_users_v2', JSON.stringify({ users: [{ id: 'u1', name: 'Old', entries: [], flight: [] }], current: 'u1' }));
   assert.deepStrictEqual(Store.create(st).immuneOf('u1'), []);
 });
+
+const rec = (tp, wbc) => ({ tp, wbc });
+test('assess: fewer than 3 pre-flight values is nodata, never ok', () => {
+  const r = I.assess([rec('L-44', 5), rec('L-3', 6), rec('R+1', 9)]);
+  assert.strictEqual(r.per.wbc.status, 'nodata'); assert.strictEqual(r.per.wbc.reasonCode, 'immunePre');
+  assert.deepStrictEqual(r.per.wbc.reasonParams, { have: 2, need: 3 });
+  assert.strictEqual(r.per.neut.status, 'nodata');
+});
+test('assess: baseline complete but no post-flight value is nodata', () => {
+  const r = I.assess([rec('L-92', 5), rec('L-44', 6), rec('L-3', 5.5)]);
+  assert.strictEqual(r.per.wbc.reasonCode, 'immunePost');
+});
+test('assess: flat baseline is nodata', () => {
+  const r = I.assess([rec('L-92', 5), rec('L-44', 5), rec('L-3', 5), rec('R+1', 9)]);
+  assert.strictEqual(r.per.wbc.reasonCode, 'flat');
+});
+test('assess: ok / watch / attention by z against own pre-flight values', () => {
+  const pre = [rec('L-92', 5), rec('L-44', 6), rec('L-3', 7)]; // mean 6, sd 1
+  const st = v => I.assess(pre.concat([rec('R+1', v)])).per.wbc;
+  assert.strictEqual(st(6.5).status, 'ok');
+  assert.strictEqual(st(8.5).status, 'watch');
+  assert.strictEqual(st(2.5).status, 'attention');
+  assert.ok(Math.abs(st(8.5).z - 2.5) < 1e-9);
+});
+test('assess: uses only the latest 3 post-flight values', () => {
+  const pre = [rec('L-92', 5), rec('L-44', 6), rec('L-3', 7)];
+  const r = I.assess(pre.concat([rec('R+1', 20), rec('R+45', 6), rec('R+82', 6), rec('R+194', 6)]));
+  assert.strictEqual(r.per.wbc.status, 'ok'); assert.strictEqual(r.per.wbc.recentN, 3);
+});
 console.log(n + ' immune tests passed');

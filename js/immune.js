@@ -8,6 +8,7 @@
  */
 (function (root) {
   'use strict';
+  var Core = (typeof module !== 'undefined' && module.exports && typeof require === 'function') ? require('./core.js') : root.Core;
   var Osdr = (typeof module !== 'undefined' && module.exports && typeof require === 'function') ? require('./osdr.js') : root.Osdr;
   var TIMEPOINTS = Osdr.TIMEPOINTS, PRE = Osdr.PRE;
 
@@ -69,6 +70,36 @@
     return { tps: tps, analytes: analytes };
   }
 
-  var api = { TIMEPOINTS: TIMEPOINTS, PRE: PRE, ANALYTES: ANALYTES, LIMITS: LIMITS, flag: flag, validate: validate, summary: summary };
+
+  var MIN_PRE = 3;
+
+  /**
+   * Status of each immune indicator, same statistical convention as the other indicators (core.js):
+   * baseline = the user's own pre-flight values (at least MIN_PRE), recent = latest (up to Core.DEFAULTS.recentN) post-flight values,
+   * z = (recent mean - baseline mean) / baseline SD; |z| >= watchZ -> watch, >= attentionZ -> attention. Not a clinical threshold.
+   * 'nodata' (never treated as 'ok') when the baseline has fewer than MIN_PRE values, there is no post-flight value, or no variation.
+   * Returns { per: { wbc: {status, ...}, ... } }.
+   */
+  function assess(records, cfg) {
+    var c = { watchZ: Core.DEFAULTS.watchZ, attentionZ: Core.DEFAULTS.attentionZ, recentN: Core.DEFAULTS.recentN };
+    if (cfg) Object.keys(cfg).forEach(function (k) { c[k] = cfg[k]; });
+    var sum = summary(records), per = {};
+    Object.keys(ANALYTES).forEach(function (a) {
+      var pts = sum.analytes[a].points, pre = [], post = [];
+      pts.forEach(function (p) { if (p.value === null) return; (p.group === 'pre' ? pre : post).push(p.value); });
+      var base = { preN: pre.length, postN: post.length };
+      if (pre.length < MIN_PRE) { per[a] = Object.assign(base, { status: 'nodata', reasonCode: 'immunePre', reasonParams: { have: pre.length, need: MIN_PRE } }); return; }
+      if (!post.length) { per[a] = Object.assign(base, { status: 'nodata', reasonCode: 'immunePost', reasonParams: {} }); return; }
+      var mu = Core.mean(pre), sd = Core.sd(pre);
+      if (!(sd > 0)) { per[a] = Object.assign(base, { status: 'nodata', reasonCode: 'flat', reasonParams: {} }); return; }
+      var recent = post.slice(-c.recentN), rm = Core.mean(recent), z = (rm - mu) / sd, az = Math.abs(z);
+      per[a] = Object.assign(base, {
+        status: az >= c.attentionZ ? 'attention' : az >= c.watchZ ? 'watch' : 'ok',
+        z: z, baseline: { mean: mu, sd: sd, n: pre.length }, recentMean: rm, recentN: recent.length
+      });
+    });
+    return { per: per };
+  }
+  var api = { MIN_PRE: MIN_PRE, assess: assess, TIMEPOINTS: TIMEPOINTS, PRE: PRE, ANALYTES: ANALYTES, LIMITS: LIMITS, flag: flag, validate: validate, summary: summary };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Immune = api;
 })(typeof window !== 'undefined' ? window : globalThis);
