@@ -1,4 +1,4 @@
-# Astronaut Self-Assessment Panel
+# Astronot Self Check
 
 Prototype for the **NASA Space Apps Challenge 2026** challenge *"Software for Astronauts on Space Missions"* (health monitoring).
 

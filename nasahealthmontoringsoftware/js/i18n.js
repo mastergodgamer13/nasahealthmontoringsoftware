@@ -22,8 +22,8 @@
   var D = {};
 
   D.en = {
-    'docTitle': 'Astronaut Self-Assessment Panel — NASA Space Apps 2026 prototype',
-    'appTitle': 'Astronaut Self-Assessment Panel',
+    'docTitle': 'Astronot Self Check — NASA Space Apps 2026 prototype',
+    'appTitle': 'Astronot Self Check',
     'appSub': 'NASA Space Apps Challenge 2026 · prototype',
     'langLabel': 'Language',
     'srcLabel': 'Data source',
@@ -192,8 +192,8 @@
   };
 
   D.tr = {
-    'docTitle': 'Astronot Öz Değerlendirme Paneli — NASA Space Apps 2026 prototipi',
-    'appTitle': 'Astronot Öz Değerlendirme Paneli',
+    'docTitle': 'Astronot Self Check — NASA Space Apps 2026 prototipi',
+    'appTitle': 'Astronot Self Check',
     'appSub': 'NASA Space Apps Challenge 2026 · prototip',
     'langLabel': 'Dil',
     'srcLabel': 'Veri kaynağı',
@@ -362,8 +362,8 @@
   };
 
   D.it = {
-    'docTitle': 'Pannello di autovalutazione dell’astronauta — prototipo NASA Space Apps 2026',
-    'appTitle': 'Pannello di autovalutazione dell’astronauta',
+    'docTitle': 'Astronot Self Check — prototipo NASA Space Apps 2026',
+    'appTitle': 'Astronot Self Check',
     'appSub': 'NASA Space Apps Challenge 2026 · prototipo',
     'langLabel': 'Lingua',
     'srcLabel': 'Fonte dei dati',
@@ -532,8 +532,8 @@
   };
 
   D.es = {
-    'docTitle': 'Panel de autoevaluación del astronauta — prototipo NASA Space Apps 2026',
-    'appTitle': 'Panel de autoevaluación del astronauta',
+    'docTitle': 'Astronot Self Check — prototipo NASA Space Apps 2026',
+    'appTitle': 'Astronot Self Check',
     'appSub': 'NASA Space Apps Challenge 2026 · prototipo',
     'langLabel': 'Idioma',
     'srcLabel': 'Fuente de datos',
