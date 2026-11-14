@@ -24,6 +24,14 @@
     albumin:   { unit: 'g/dL',   lo: 3.6, hi: 5.1, decimals: 1 }
   };
 
+  // Typing-error limits only (impossible values). They are NOT clinical thresholds and NOT the lab range.
+  var LIMITS = {
+    glucose:   { min: 10,  max: 800 },
+    potassium: { min: 0.5, max: 12 },
+    sodium:    { min: 80,  max: 200 },
+    albumin:   { min: 0.5, max: 10 }
+  };
+
   var CREW = {
     C001: {
       glucose: [83, 80, 69, 90, 84, 91, 87], potassium: [4.6, 4.2, 3.9, 4.4, 4, 4.3, 4.3],
@@ -86,6 +94,71 @@
     return out;
   }
 
+  function isNum(x) { return typeof x === 'number' && isFinite(x); }
+  function roundTo(x, d) { var f = Math.pow(10, d); return Math.round(x * f) / f; }
+
+  /** 'pre' | 'post' | null — same split as the dataset: first PRE time points are pre-flight. */
+  function groupOf(tp) {
+    var i = TIMEPOINTS.indexOf(tp);
+    return i < 0 ? null : (i < PRE ? 'pre' : 'post');
+  }
+
+  /**
+   * Validates one typed-in record for one time point, following the dataset's rules:
+   * time point must be one of TIMEPOINTS; values for the four analytes (each optional, at least one);
+   * numbers only, within typing-error limits, rounded to the dataset's decimals for that analyte.
+   * raw: { tp, glucose, potassium, sodium, albumin } (strings or numbers).
+   */
+  function validateFlight(raw) {
+    raw = raw || {};
+    if (TIMEPOINTS.indexOf(raw.tp) < 0) return { ok: false, codes: [{ code: 'tp' }] };
+    var codes = [], rec = { tp: raw.tp }, any = false;
+    Object.keys(ANALYTES).forEach(function (a) {
+      var s = raw[a];
+      if (s === undefined || s === null || String(s).trim() === '') return;
+      var x = Number(String(s).trim().replace(',', '.'));
+      if (!isFinite(x)) { codes.push({ code: 'notnum', id: a }); return; }
+      var L = LIMITS[a];
+      if (x < L.min || x > L.max) { codes.push({ code: 'range', id: a, min: L.min, max: L.max }); return; }
+      rec[a] = roundTo(x, ANALYTES[a].decimals); any = true;
+    });
+    if (!codes.length && !any) codes.push({ code: 'empty' });
+    return codes.length ? { ok: false, codes: codes } : { ok: true, entry: rec };
+  }
+
+  /**
+   * Pre-flight vs post-flight summary of typed-in records (one record per time point).
+   * Pre-flight mean/range use the pre-flight time points that have a value (preN of PRE).
+   * delta = post value - pre-flight mean (needs preN >= 1); vsPre needs preN >= 2.
+   * Descriptive only: no status labels, no statistics.
+   */
+  function flightSummary(records) {
+    var byTp = {};
+    (records || []).forEach(function (r) { if (r && groupOf(r.tp)) byTp[r.tp] = r; });
+    var tps = TIMEPOINTS.filter(function (tp) { return byTp[tp]; });
+    var analytes = {};
+    Object.keys(ANALYTES).forEach(function (a) {
+      var pre = [];
+      TIMEPOINTS.slice(0, PRE).forEach(function (tp) { if (byTp[tp] && isNum(byTp[tp][a])) pre.push(byTp[tp][a]); });
+      var n = pre.length;
+      var mean = n ? pre.reduce(function (s, x) { return s + x; }, 0) / n : null;
+      var lo = n ? Math.min.apply(null, pre) : null, hi = n ? Math.max.apply(null, pre) : null;
+      analytes[a] = {
+        preN: n, preMean: mean, preMin: lo, preMax: hi,
+        points: tps.map(function (tp) {
+          var v = isNum(byTp[tp][a]) ? byTp[tp][a] : null, post = groupOf(tp) === 'post';
+          return {
+            tp: tp, group: groupOf(tp), value: v,
+            flag: v === null ? null : flag(a, v),
+            delta: post && v !== null && mean !== null ? v - mean : null,
+            vsPre: post && v !== null && n >= 2 ? (v < lo ? 'below' : v > hi ? 'above' : null) : null
+          };
+        })
+      };
+    });
+    return { tps: tps, analytes: analytes };
+  }
+
   /** Time points where at least `minCount` crew members are outside the dataset's lab range. */
   function outsideAt(analyte, minCount) {
     var res = [];
@@ -100,8 +173,8 @@
   }
 
   var api = {
-    STUDY: 'OSD-575', TIMEPOINTS: TIMEPOINTS, PRE: PRE, ANALYTES: ANALYTES, CREW: CREW,
-    crewIds: crewIds, flag: flag, summary: summary, prePost: prePost, outsideAt: outsideAt,
+    STUDY: 'OSD-575', TIMEPOINTS: TIMEPOINTS, PRE: PRE, ANALYTES: ANALYTES, LIMITS: LIMITS, CREW: CREW,
+    crewIds: crewIds, flag: flag, summary: summary, prePost: prePost, groupOf: groupOf, validateFlight: validateFlight, flightSummary: flightSummary, outsideAt: outsideAt,
     SOURCE_URL: 'https://osdr.nasa.gov/geode-py/ws/studies/OSD-575/download?source=datamanager&file=LSDS-8_Comprehensive_Metabolic_Panel_CMP_TRANSFORMED.csv'
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Osdr = api;

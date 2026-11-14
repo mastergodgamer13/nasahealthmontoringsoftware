@@ -72,6 +72,15 @@
         <div id="form-msg" role="alert" class="form-msg"></div>
         <button id="clear-manual" class="link" type="button" data-i18n="clear">Delete my entries</button>
       </section>
+
+      <section class="card" aria-labelledby="h-flight">
+        <h2 id="h-flight" data-i18n="fl.title">Pre-flight / post-flight values</h2>
+        <p class="hint" data-i18n="fl.hint">Enter a laboratory value for one time point of the selected user. Time points and analytes follow the NASA OSD-575 dataset.</p>
+        <form id="flightform" novalidate></form>
+        <div id="flight-msg" role="alert" class="form-msg"></div>
+        <div id="flight-summary" aria-live="polite"></div>
+        <button id="clear-flight" class="link" type="button" data-i18n="fl.clear">Delete my pre-/post-flight values</button>
+      </section>
     </aside>
 
     <section class="stage" aria-labelledby="h-body">

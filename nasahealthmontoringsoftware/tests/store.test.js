@@ -47,4 +47,21 @@ test('blocked storage does not throw', () => {
   const bad = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); } };
   const s = Store.create(bad); assert.ok(s.add('A').ok);
 });
+test('flight records are per user, one per time point, persisted, and separate from entries', () => {
+  const st = mem(); const s = Store.create(st); const a = s.add('A').user, b = s.add('B').user;
+  s.saveEntry(a.id, { date: '2026-01-01', hr: 60 });
+  assert.ok(s.saveFlight(a.id, { tp: 'L-3', glucose: 69 })); s.saveFlight(a.id, { tp: 'L-3', glucose: 70 }); s.saveFlight(b.id, { tp: 'L-3', glucose: 99 });
+  assert.strictEqual(s.flightOf(a.id).length, 1); assert.strictEqual(s.flightOf(a.id)[0].glucose, 70); assert.strictEqual(s.flightOf(b.id)[0].glucose, 99);
+  const s2 = Store.create(st); assert.strictEqual(s2.flightOf(a.id)[0].glucose, 70); assert.strictEqual(s2.entriesOf(a.id).length, 1);
+  s.clearEntries(a.id); assert.strictEqual(s.flightOf(a.id).length, 1); // clearing check-ins keeps flight values
+  s.clearFlight(a.id); assert.strictEqual(s.flightOf(a.id).length, 0); assert.strictEqual(s.flightOf(b.id).length, 1);
+});
+test('flight: rejects bad records, drops non-numeric fields, old saved data without flight still loads', () => {
+  const s = Store.create(mem()); const a = s.add('A').user;
+  assert.strictEqual(s.saveFlight(a.id, { glucose: 1 }), false); assert.strictEqual(s.saveFlight('nope', { tp: 'L-3' }), false);
+  s.saveFlight(a.id, { tp: 'R+1', glucose: 90, sodium: 'x', evil: NaN });
+  assert.deepStrictEqual(s.flightOf(a.id)[0], { tp: 'R+1', glucose: 90 });
+  const old = mem({ [Store.KEY]: JSON.stringify({ users: [{ id: 'u1', name: 'Old', entries: [] }], current: 'u1' }) });
+  assert.deepStrictEqual(Store.create(old).flightOf('u1'), []);
+});
 console.log(n + ' store tests passed');
