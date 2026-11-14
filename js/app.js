@@ -141,7 +141,8 @@
     box.appendChild(el('div', { class: 'tags' }, def.hazards.map(function (h) { return el('span', { text: t('hazard.' + h) }); })));
     box.appendChild(el('div', { class: 'meta' }, [t('hazardNote') + ' ', el('span', { class: 'draft', text: t('draft') })]));
 
-    if (def.osdr) { var rr = el('div', { class: 'osd569 region-ref' }); box.appendChild(rr); Views.renderRegionRef(ctx(), rr, def.osdr); }
+    if (def.osdr) { var own = el('div', { class: 'immune-own' }); box.appendChild(own); Views.renderImmuneOwn(ctx(), own, store.immuneOf(store.current()), true);
+      var rr = el('div', { class: 'osd569 region-ref' }); box.appendChild(rr); Views.renderRegionRef(ctx(), rr, def.osdr); }
 
     def.indicators.forEach(function (id) {
       var ind = Core.getIndicator(id), res = assessment.per[id];
@@ -194,7 +195,7 @@
 
   var viewCtx = null;
   function ctx() {
-    if (!viewCtx) viewCtx = { t: t, Core: Core, Osdr: Osdr, Osd635: Osd635, Osd569: Osd569, Expression: Expression, store: store, chip: chip, indLabel: indLabel, unitOf: unitOf, fmt: fmt };
+    if (!viewCtx) viewCtx = { t: t, Core: Core, Osdr: Osdr, Osd635: Osd635, Osd569: Osd569, Immune: Immune, Expression: Expression, store: store, chip: chip, indLabel: indLabel, unitOf: unitOf, fmt: fmt };
     return viewCtx;
   }
 
@@ -208,12 +209,13 @@
 
   function render() {
     assessment = Core.assess(entries());
-    applyStatic(); updateFormLabels(); updateFlightLabels();
+    applyStatic(); updateFormLabels(); updateFlightLabels(); updateImmuneLabels();
     renderTabs(); renderUsers();
     renderBadge(); renderOverall(); renderBody(); renderDetail();
     if (state.tab === 'dash') {
       Views.renderPrePost(ctx(), $('prepost'));
       Views.renderFlight(ctx(), $('flight-summary'), store.flightOf(store.current()));
+      Views.renderImmuneOwn(ctx(), $('immune-summary'), store.immuneOf(store.current()));
     }
     if (state.tab === 'compare') Views.renderCompare(ctx(), $('cmp'));
     if (state.tab === 'osdr') Views.renderOsdr(ctx(), $('osdr'));
@@ -231,8 +233,8 @@
     var none = !users.length;
     sel.disabled = none; $('user-remove').disabled = none;
     $('user-none').hidden = !none;
-    Array.prototype.forEach.call(document.querySelectorAll('#checkin input,#checkin button,#flightform input,#flightform select,#flightform button'), function (x) { x.disabled = none; });
-    $('clear-manual').disabled = none; $('clear-flight').disabled = none;
+    Array.prototype.forEach.call(document.querySelectorAll('#checkin input,#checkin button,#flightform input,#flightform select,#flightform button,#immuneform input,#immuneform select,#immuneform button'), function (x) { x.disabled = none; });
+    $('clear-manual').disabled = none; $('clear-flight').disabled = none; $('clear-immune').disabled = none;
   }
 
   function userMsg(text, cls) { var m = $('user-msg'); m.className = 'form-msg ' + (cls || ''); m.textContent = text; }
@@ -323,14 +325,59 @@
     });
   }
 
+  /* ---------- immune cells form (rules: Immune) ---------- */
+  function immuneErrText(v) {
+    return v.codes.map(function (c) {
+      var an = c.id ? Immune.ANALYTES[c.id] : null;
+      return t('fl.err.' + c.code, { label: c.id ? t('o9.a.' + c.id) : '', min: c.min, max: c.max, unit: an ? an.unit : '' });
+    }).join(' ');
+  }
+  function buildImmuneForm() {
+    var f = $('immuneform'); f.innerHTML = '';
+    var selTp = el('select', { name: 'tp', required: 'required' });
+    var gPre = el('optgroup', { 'data-im-group': 'pre' }), gPost = el('optgroup', { 'data-im-group': 'post' });
+    Immune.TIMEPOINTS.forEach(function (tp) { (Osdr.groupOf(tp) === 'pre' ? gPre : gPost).appendChild(el('option', { value: tp, text: tp })); });
+    selTp.appendChild(gPre); selTp.appendChild(gPost); selTp.value = Immune.TIMEPOINTS[Immune.PRE];
+    f.appendChild(el('label', { class: 'full' }, [el('span', { 'data-im': 'tp' }), selTp]));
+    Object.keys(Immune.ANALYTES).forEach(function (a) {
+      var an = Immune.ANALYTES[a];
+      f.appendChild(el('label', null, [el('span', { 'data-im-a': a }),
+        el('input', { type: 'number', name: a, step: an.decimals ? '0.1' : '1', min: String(Immune.LIMITS[a].min), max: String(Immune.LIMITS[a].max), inputmode: 'decimal' }),
+        el('small', { class: 'meta', 'data-im-lab': a })]));
+    });
+    f.appendChild(el('button', { type: 'submit', 'data-im': 'save' }));
+    f.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var raw = {};
+      Array.prototype.forEach.call(f.elements, function (inp) { if (inp.name) raw[inp.name] = inp.value; });
+      var v = Immune.validate(raw), msg = $('immune-msg');
+      if (!store.current()) { msg.className = 'form-msg err'; msg.textContent = t('users.needUser'); return; }
+      if (!v.ok) { msg.className = 'form-msg err'; msg.textContent = immuneErrText(v); return; }
+      store.saveImmune(store.current(), v.entry); // one record per time point: replaced if it exists
+      msg.className = 'form-msg good'; msg.textContent = t('fl.saved', { tp: v.entry.tp, group: t('fl.group.' + Osdr.groupOf(v.entry.tp)) });
+      render();
+    });
+  }
+  function updateImmuneLabels() {
+    var f = $('immuneform');
+    Array.prototype.forEach.call(f.querySelectorAll('[data-im-group]'), function (g) { g.setAttribute('label', t('fl.group.' + g.getAttribute('data-im-group'))); });
+    f.querySelector('[data-im="tp"]').textContent = t('osdr.tp');
+    f.querySelector('[data-im="save"]').textContent = t('fl.save');
+    Array.prototype.forEach.call(f.querySelectorAll('[data-im-a]'), function (s) { s.textContent = t('o9.a.' + s.getAttribute('data-im-a')); });
+    Array.prototype.forEach.call(f.querySelectorAll('[data-im-lab]'), function (s) {
+      var an = Immune.ANALYTES[s.getAttribute('data-im-lab')]; s.textContent = t('im.lab', { lo: an.lo, hi: an.hi });
+    });
+  }
+
   function init() {
     I18n.init();
     store = Store.create(safeStorage(), { legacyName: t('users.legacyName') });
     var sel = $('lang');
     I18n.LANGS.forEach(function (l) { sel.appendChild(el('option', { value: l.code, text: l.name })); });
-    sel.addEventListener('change', function () { I18n.set(sel.value); $('form-msg').textContent = ''; $('flight-msg').textContent = ''; render(); });
+    sel.addEventListener('change', function () { I18n.set(sel.value); $('form-msg').textContent = ''; $('flight-msg').textContent = ''; $('immune-msg').textContent = ''; render(); });
     buildForm();
     buildFlightForm();
+    buildImmuneForm();
     $('btn-demo').addEventListener('click', function () { state.mode = 'demo'; render(); });
     $('btn-manual').addEventListener('click', function () { state.mode = 'manual'; render(); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function (b) {
@@ -348,6 +395,11 @@
     $('user-remove').addEventListener('click', function () {
       var u = store.currentUser(); if (!u) return;
       if (window.confirm(t('users.confirmRemove', { user: u.name }))) { store.remove(u.id); userMsg(''); render(); }
+    });
+    $('clear-immune').addEventListener('click', function () {
+      var u = store.currentUser();
+      if (!u || !u.immune.length) return;
+      if (window.confirm(t('im.confirmClear', { user: u.name }))) { store.clearImmune(u.id); $('immune-msg').textContent = ''; render(); }
     });
     $('clear-flight').addEventListener('click', function () {
       var u = store.currentUser();

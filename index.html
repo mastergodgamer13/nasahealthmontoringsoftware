@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Astronot Self Check — NASA Space Apps 2026 prototype</title>
-  <link rel="stylesheet" href="css/style.css?v=20261114c">
+  <link rel="stylesheet" href="css/style.css?v=20261114d">
 </head>
 <body>
   <header class="top">
@@ -81,6 +81,15 @@
         <div id="flight-summary" aria-live="polite"></div>
         <button id="clear-flight" class="link" type="button" data-i18n="fl.clear">Delete my pre-/post-flight values</button>
       </section>
+
+      <section class="card" aria-labelledby="h-immune">
+        <h2 id="h-immune" data-i18n="im.title">Immune cells (blood count)</h2>
+        <p class="hint" data-i18n="im.hint">hint</p>
+        <form id="immuneform" novalidate></form>
+        <div id="immune-msg" role="alert" class="form-msg"></div>
+        <div id="immune-summary" aria-live="polite"></div>
+        <button id="clear-immune" class="link" type="button" data-i18n="im.clear">Delete my immune cell values</button>
+      </section>
     </aside>
 
     <section class="stage" aria-labelledby="h-body">
@@ -155,18 +164,19 @@
        Status levels use configurable statistical cut-offs (|z| ≥ 2 and ≥ 3 relative to your first 7 readings), not clinical thresholds.</p>
   </footer>
 
-  <script src="js/i18n.js?v=20261114c"></script>
-  <script src="js/core.js?v=20261114c"></script>
-  <script src="js/store.js?v=20261114c"></script>
-  <script src="js/osdr.js?v=20261114c"></script>
-  <script src="js/expression.js?v=20261114c"></script>
-  <script src="js/osd635.js?v=20261114c"></script>
-  <script src="js/osd569-data.js?v=20261114c"></script>
-  <script src="js/osd569.js?v=20261114c"></script>
-  <script src="js/charts.js?v=20261114c"></script>
-  <script src="js/demo.js?v=20261114c"></script>
-  <script src="js/content.js?v=20261114c"></script>
-  <script src="js/views.js?v=20261114c"></script>
-  <script src="js/app.js?v=20261114c"></script>
+  <script src="js/i18n.js?v=20261114d"></script>
+  <script src="js/core.js?v=20261114d"></script>
+  <script src="js/store.js?v=20261114d"></script>
+  <script src="js/osdr.js?v=20261114d"></script>
+  <script src="js/expression.js?v=20261114d"></script>
+  <script src="js/osd635.js?v=20261114d"></script>
+  <script src="js/osd569-data.js?v=20261114d"></script>
+  <script src="js/osd569.js?v=20261114d"></script>
+  <script src="js/immune.js?v=20261114d"></script>
+  <script src="js/charts.js?v=20261114d"></script>
+  <script src="js/demo.js?v=20261114d"></script>
+  <script src="js/content.js?v=20261114d"></script>
+  <script src="js/views.js?v=20261114d"></script>
+  <script src="js/app.js?v=20261114d"></script>
 </body>
 </html>
