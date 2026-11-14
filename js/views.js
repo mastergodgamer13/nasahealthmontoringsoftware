@@ -158,7 +158,7 @@
     if (genesWaiting) { genesWaiting.push({ ok: ok, fail: fail }); return; }
     genesWaiting = [{ ok: ok, fail: fail }];
     var sc = document.createElement('script');
-    sc.src = 'js/osd635-genes.js?v=20261114c';
+    sc.src = 'js/osd635-genes.js?v=20261114d';
     sc.onload = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.ok(); }); };
     sc.onerror = function () { var w = genesWaiting; genesWaiting = null; w.forEach(function (x) { x.fail(); }); };
     document.head.appendChild(sc);
@@ -420,6 +420,44 @@
     box.appendChild(el('p', { class: 'meta' }, [t('rr.source') + ' ', el('a', { href: O.DOI_URL, target: '_blank', rel: 'noopener noreferrer', text: t('o9.paper') })]));
   }
 
+  /* ---------- the user's own immune cell values (descriptive; never a status) ---------- */
+  function renderImmuneOwn(ctx, box, records, inRegion) {
+    var t = ctx.t, I = ctx.Immune;
+    box.innerHTML = '';
+    var sum = I.summary(records);
+    if (inRegion) {
+      box.appendChild(el('h4', { text: t('im.own.title') }));
+      box.appendChild(el('div', { class: 'badge man', text: t('im.own.badge') }));
+    }
+    if (!sum.tps.length) { box.appendChild(el('p', { class: 'empty', text: t(inRegion ? 'im.own.empty' : 'im.none') })); return; }
+    var names = Object.keys(I.ANALYTES);
+    var head = el('tr', null, [el('th', { scope: 'col', text: t('osdr.tp') })]);
+    names.forEach(function (a) { head.appendChild(el('th', { scope: 'col', text: t('o9.a.' + a) })); });
+    var tbody = el('tbody');
+    sum.tps.forEach(function (tp, i) {
+      var tr = el('tr', null, [el('th', { scope: 'row' }, [tp, el('div', { class: 'meta', text: t('fl.group.' + (I.TIMEPOINTS.indexOf(tp) < I.PRE ? 'pre' : 'post')) })])]);
+      names.forEach(function (a) {
+        var an = I.ANALYTES[a], dd = an.decimals + 1, p = sum.analytes[a].points[i];
+        if (p.value === null) { tr.appendChild(el('td', { text: '—' })); return; }
+        var kids = [p.value.toFixed(an.decimals)];
+        if (p.flag) kids.push(el('span', { class: 'flag ' + p.flag, title: t('osdr.' + p.flag), text: p.flag === 'low' ? ' ▼' : ' ▲' }));
+        if (p.delta !== null) kids.push(el('div', { class: 'meta', text: (p.delta >= 0 ? '+' : '') + p.delta.toFixed(dd) }));
+        if (p.vsPre) kids.push(el('div', { class: 'meta', text: (p.vsPre === 'below' ? '↓ ' : '↑ ') + t('pp.' + p.vsPre) }));
+        tr.appendChild(el('td', null, kids));
+      });
+      tbody.appendChild(tr);
+    });
+    var pre = el('tr', { class: 'sumrow' }, [el('th', { scope: 'row', text: t('fl.preMean') })]);
+    names.forEach(function (a) {
+      var an = I.ANALYTES[a], s = sum.analytes[a];
+      pre.appendChild(el('td', null, s.preN ? [s.preMean.toFixed(an.decimals + 1), el('div', { class: 'meta', text: t('fl.n', { n: s.preN, total: I.PRE }) })] : ['—']));
+    });
+    tbody.appendChild(pre);
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), tbody])]));
+    box.appendChild(el('p', { class: 'meta', text: '▼ ' + t('osdr.low') + ' · ▲ ' + t('osdr.high') + ' · ' + t('osdr.delta') + ' (+/−)' }));
+    box.appendChild(el('p', { class: 'meta', text: t('im.note') }));
+  }
+
   /* ---------- Real data (OSDR) ---------- */
   function renderOsdr(ctx, box) {
     var t = ctx.t, O = ctx.Osdr;
@@ -485,5 +523,5 @@
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
   }
 
-  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight, renderOsd635: renderOsd635, renderOsd569: renderOsd569, renderRegionRef: renderRegionRef };
+  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight, renderOsd635: renderOsd635, renderOsd569: renderOsd569, renderRegionRef: renderRegionRef, renderImmuneOwn: renderImmuneOwn };
 })(typeof window !== 'undefined' ? window : globalThis);
