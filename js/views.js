@@ -151,6 +151,42 @@
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
   }
 
+  /* ---------- Real data: OSD-635 study information (metadata only, no gene results yet) ---------- */
+  function renderOsd635(ctx, box) {
+    var t = ctx.t, O = ctx.Osd635, S = O.STUDY;
+    box.innerHTML = '';
+    box.appendChild(el('h3', { text: t('o6.title') + ': ' + S.id }));
+    box.appendChild(el('div', { class: 'badge real', text: t('o6.badge') }));
+    box.appendChild(el('p', { class: 'msg', text: S.title }));
+    box.appendChild(el('p', { class: 'hint', text: t('o6.what') }));
+
+    var rows = [
+      [t('o6.f.cell'), S.cell + ' — ' + S.organism],
+      [t('o6.f.design'), t('o6.v.design', { f: O.count('flight'), g: O.count('ground') })],
+      [t('o6.f.culture'), t('o6.v.culture', { d: S.cultureDays, c: S.cultureTempC })],
+      [t('o6.f.mission'), S.mission + ', ' + S.program + ', ' + S.missionStart + ' – ' + S.missionEnd],
+      [t('o6.f.hardware'), S.hardware],
+      [t('o6.f.sequencing'), S.platform + ', ' + S.library]
+    ];
+    var tb = el('tbody');
+    rows.forEach(function (r) { tb.appendChild(el('tr', null, [el('th', { scope: 'row', text: r[0] }), el('td', { text: r[1] })])); });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [tb])]));
+
+    var head = el('tr', null, ['o6.sample', 'o6.group', 'o6.depth', 'o6.rrna'].map(function (k) { return el('th', { scope: 'col', text: t(k) }); }));
+    var body = el('tbody');
+    O.SAMPLES.forEach(function (s) {
+      body.appendChild(el('tr', null, [
+        el('th', { scope: 'row', text: s.id }), el('td', { text: t('o6.g.' + s.group) }),
+        el('td', { text: s.readDepth.toLocaleString('en-US') }), el('td', { text: s.rrna.toFixed(2) + ' %' })
+      ]));
+    });
+    box.appendChild(el('div', { class: 'tablewrap' }, [el('table', { class: 'cmp' }, [el('thead', null, [head]), body])]));
+
+    box.appendChild(el('div', { class: 'callout', role: 'note', text: t('o6.pending', { file: S.resultsFile }) }));
+    box.appendChild(el('p', { class: 'meta', text: t('o6.stated', { n: S.statedSignificantGenes.toLocaleString('en-US') }) }));
+    box.appendChild(el('p', { class: 'meta' }, [t('o6.source', { files: S.sourceFiles.join(', ') }) + ' ', el('a', { href: O.DOI_URL, target: '_blank', rel: 'noopener noreferrer', text: t('o6.paper') })]));
+  }
+
   /* ---------- Real data (OSDR) ---------- */
   function renderOsdr(ctx, box) {
     var t = ctx.t, O = ctx.Osdr;
@@ -205,10 +241,13 @@
     var pp = el('div', { class: 'prepost-sub' });
     box.appendChild(pp);
     renderPrePost(ctx, pp, { sub: true });
+    var o6 = el('div', { class: 'osd635' });
+    box.appendChild(o6);
+    renderOsd635(ctx, o6);
     box.appendChild(el('p', { class: 'msg', text: t('osdr.limits') }));
     box.appendChild(el('p', { class: 'meta', text: t('osdr.fileNote') }));
     box.appendChild(el('p', { class: 'meta' }, [t('osdr.source') + ' ', el('a', { href: O.SOURCE_URL, target: '_blank', rel: 'noopener noreferrer', text: t('osdr.link') })]));
   }
 
-  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight };
+  root.Views = { renderCompare: renderCompare, renderOsdr: renderOsdr, renderPrePost: renderPrePost, renderFlight: renderFlight, renderOsd635: renderOsd635 };
 })(typeof window !== 'undefined' ? window : globalThis);
